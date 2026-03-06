@@ -49,10 +49,10 @@ export const GameBoard: React.FC = () => {
                 }, 1000);
             }
         } else if (gameState.phase === 'call') {
-            // MVP: Wait 2 seconds for a call. If no call, advance turn.
+            // MVP: Wait 5 seconds for a call so the player can decide.
             timeoutId = setTimeout(() => {
                 setGameState(advanceTurn(gameState));
-            }, 2000);
+            }, 5000);
         }
 
         return () => clearTimeout(timeoutId);
@@ -219,12 +219,11 @@ export const GameBoard: React.FC = () => {
                             <div className="empty-discards">No Discards Yet</div>
                         ) : (
                             <div className="recent-discards-container">
-                                {gameState.discards.slice(-6).map((tile, i) => (
-                                    <div key={`${tile.id}-${i}`} className="discarded-tile-wrapper">
+                                {gameState.discards.map((tile, i) => (
+                                    <div key={`${tile.id}-${i}`} className={`discarded-tile-wrapper ${i === gameState.discards.length - 1 && gameState.phase === 'call' ? 'latest-discard' : ''}`}>
                                         <MahJongTile
                                             tile={tile}
-                                            // Make the very last discard pop out slightly if we want, or just normal
-                                            selected={i === Math.min(gameState.discards.length - 1, 5) && gameState.phase === 'call'}
+                                            selected={i === gameState.discards.length - 1 && gameState.phase === 'call'}
                                         />
                                     </div>
                                 ))}

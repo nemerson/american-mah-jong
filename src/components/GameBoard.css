@@ -108,19 +108,26 @@
     gap: 4px;
     justify-content: center;
     padding: 10px;
-    max-width: 350px;
+    max-width: 500px;
+    max-height: 300px;
+    overflow-y: auto;
 }
 
 .discarded-tile-wrapper {
-    transform: scale(0.8);
-    /* Make discards slightly smaller */
+    transform: scale(0.6);
     transform-origin: center center;
     transition: all 0.2s ease-in-out;
+    margin: -6px;
 }
 
 .discarded-tile-wrapper:hover {
-    transform: scale(0.9) translateY(-2px);
+    transform: scale(0.75) translateY(-2px);
     z-index: 10;
+}
+
+.discarded-tile-wrapper.latest-discard {
+    transform: scale(0.8);
+    filter: drop-shadow(0 0 8px var(--accent-gold));
 }
 
 .human-player-area {
