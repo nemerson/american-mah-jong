@@ -145,11 +145,10 @@ export const GameBoard: React.FC = () => {
 
         const humanTiles = humanPlayer.hand.filter(t => selectedTileIds.includes(t.id));
 
-        // Generate bot passes (courtesy allows 0-3)
-        const botPassCount = isCourtesy ? Math.floor(Math.random() * 4) : 3;
-        const bot1Tiles = decideBotCharlestonPass(gameState.players[1], gameState, botPassCount);
-        const bot2Tiles = decideBotCharlestonPass(gameState.players[2], gameState, botPassCount);
-        const bot3Tiles = decideBotCharlestonPass(gameState.players[3], gameState, botPassCount);
+        // Generate bot passes — each bot independently picks 0-3 tiles for courtesy
+        const bot1Tiles = decideBotCharlestonPass(gameState.players[1], gameState, isCourtesy ? Math.floor(Math.random() * 4) : 3);
+        const bot2Tiles = decideBotCharlestonPass(gameState.players[2], gameState, isCourtesy ? Math.floor(Math.random() * 4) : 3);
+        const bot3Tiles = decideBotCharlestonPass(gameState.players[3], gameState, isCourtesy ? Math.floor(Math.random() * 4) : 3);
 
         const passes: CharlestonPass[] = [
             { fromIndex: 0, toIndex: -1, tiles: humanTiles },

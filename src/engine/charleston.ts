@@ -55,6 +55,17 @@ export function executeCharlestonPasses(
     const newState = { ...state };
     const newPlayers = [...state.players.map(p => ({ ...p, hand: [...p.hand] }))];
 
+    // For courtesy phase, enforce the minimum-of-two rule between across-table partners
+    // Pairs: 0↔2 and 1↔3
+    if (phase === 'courtesy') {
+        const pair1Min = Math.min(passes[0].tiles.length, passes[2].tiles.length);
+        const pair2Min = Math.min(passes[1].tiles.length, passes[3].tiles.length);
+        passes[0].tiles = passes[0].tiles.slice(0, pair1Min);
+        passes[2].tiles = passes[2].tiles.slice(0, pair1Min);
+        passes[1].tiles = passes[1].tiles.slice(0, pair2Min);
+        passes[3].tiles = passes[3].tiles.slice(0, pair2Min);
+    }
+
     // Apply removals first
     for (const pass of passes) {
         const player = newPlayers[pass.fromIndex];
