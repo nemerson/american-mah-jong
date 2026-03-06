@@ -1,0 +1,14 @@
+# Only ignore these when packaging for npm/electron
+# This file overrides .gitignore for electron-packager
+src/
+release-builds/
+out/
+.git/
+.gitignore
+*.ts
+!*.d.ts
+electron/
+tsconfig*.json
+eslint.config.js
+vite.config.ts
+README.md

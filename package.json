@@ -19,7 +19,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
-    "package": "npm run build && electron-packager . american-mah-jong --platform=win32 --arch=x64 --out=release-builds --overwrite"
+    "package": "npm run build && electron-packager . american-mah-jong --platform=win32 --arch=x64 --out=release-builds --overwrite --no-asar --ignore=\"/src($|/)\" --ignore=\"/release-builds($|/)\" --ignore=\"/out($|/)\" --ignore=\"/\\.git($|/)\" --ignore=\"/\\.gitignore\""
   },
   "dependencies": {
     "framer-motion": "^12.35.0",
