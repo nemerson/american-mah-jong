@@ -1,8 +1,16 @@
 // International Mahjong Card 2026 — Year of the Horse
 // All 53 winning hands across 9 sections
+// Color-coded by suit: 'a' = Suit A, 'b' = Suit B, 'c' = Suit C, 'n' = Neutral/suitless
+
+export type SuitColor = 'a' | 'b' | 'c' | 'n';
+
+export interface PatternSegment {
+    text: string;
+    suit: SuitColor;
+}
 
 export interface CardHand {
-    pattern: string;
+    segments: PatternSegment[];
     description: string;
     points: number;
 }
@@ -12,101 +20,104 @@ export interface CardSection {
     hands: CardHand[];
 }
 
+// Helper to build segments quickly
+const S = (text: string, suit: SuitColor): PatternSegment => ({ text, suit });
+
 export const internationalMahjongCard: CardSection[] = [
     {
         name: 'Year of the Horse 2026',
         hands: [
-            { pattern: 'NEWS 2026 DDD DDD', description: 'Any 3 suits', points: 50 },
-            { pattern: '222 000 2222 6666', description: 'Any 3 suits', points: 50 },
-            { pattern: 'FFFF 22 0000 22 66', description: 'Any 2 suits, pairs of 2\'s same suit', points: 50 },
-            { pattern: '222 00 222 66 66 66', description: 'Any 3 suits', points: 50 },
-            { pattern: 'FF 2026 FF DDD DDD', description: 'Any 3 suits', points: 75 },
-            { pattern: 'NEWS 2026 2026 DD', description: 'Any 3 suits', points: 100 },
+            { segments: [S('NEWS', 'n'), S(' 2', 'a'), S('0', 'n'), S('2', 'b'), S('6', 'c'), S(' DDD', 'a'), S(' DDD', 'b')], description: 'Any 3 suits', points: 50 },
+            { segments: [S('222', 'a'), S(' 000', 'n'), S(' 2222', 'b'), S(' 6666', 'c')], description: 'Any 3 suits', points: 50 },
+            { segments: [S('FFFF', 'n'), S(' 22', 'a'), S(' 0000', 'n'), S(' 22', 'a'), S(' 66', 'b')], description: 'Any 2 suits, pairs of 2\'s same suit', points: 50 },
+            { segments: [S('222', 'a'), S(' 00', 'n'), S(' 222', 'b'), S(' 66', 'a'), S(' 66', 'b'), S(' 66', 'c')], description: 'Any 3 suits', points: 50 },
+            { segments: [S('FF', 'n'), S(' 2', 'a'), S('0', 'n'), S('2', 'a'), S('6', 'a'), S(' FF', 'n'), S(' DDD', 'b'), S(' DDD', 'c')], description: 'Any 3 suits', points: 75 },
+            { segments: [S('NEWS', 'n'), S(' 2', 'a'), S('0', 'n'), S('2', 'b'), S('6', 'c'), S(' 2', 'a'), S('0', 'n'), S('2', 'b'), S('6', 'c'), S(' DD', 'a')], description: 'Any 3 suits', points: 100 },
         ]
     },
     {
         name: 'Pungs & Chows',
         hands: [
-            { pattern: 'FF 222 222 222 DDD', description: 'Any 3 suits, pungs any same even no., any dragon', points: 50 },
-            { pattern: '111 222 333 444 NN', description: 'Any 2 suits, any 4 consec. nos, pair of any wind', points: 50 },
-            { pattern: 'FF 000 123 444 567', description: 'Any 7 consec. nos, any 3 suits', points: 75 },
-            { pattern: 'FFF 123 456 789 NN', description: 'Any 3 suits, pair of any wind', points: 75 },
-            { pattern: '123 D NEWS 456 D DD', description: 'Any 3 suits, chows any 6 consec. nos, pair opp. dragons', points: 100 },
+            { segments: [S('FF', 'n'), S(' 222', 'a'), S(' 222', 'b'), S(' 222', 'c'), S(' DDD', 'a')], description: 'Any 3 suits, pungs any same even no., any dragon', points: 50 },
+            { segments: [S('111', 'a'), S(' 222', 'a'), S(' 333', 'b'), S(' 444', 'b'), S(' NN', 'n')], description: 'Any 2 suits, any 4 consec. nos, pair of any wind', points: 50 },
+            { segments: [S('FF', 'n'), S(' 000', 'n'), S(' 123', 'a'), S(' 444', 'b'), S(' 567', 'c')], description: 'Any 7 consec. nos, any 3 suits', points: 75 },
+            { segments: [S('FFF', 'n'), S(' 123', 'a'), S(' 456', 'b'), S(' 789', 'c'), S(' NN', 'n')], description: 'Any 3 suits, pair of any wind', points: 75 },
+            { segments: [S('123', 'a'), S(' D', 'a'), S(' NEWS', 'n'), S(' 456', 'b'), S(' D', 'b'), S(' DD', 'c')], description: 'Any 3 suits, chows any 6 consec. nos, pair opp. dragons', points: 100 },
         ]
     },
     {
         name: 'Flower Bouquet',
         hands: [
-            { pattern: 'FFF 1111 FFF DD DD', description: 'Any 3 suits, kong any no., pairs opp. dragons', points: 50 },
-            { pattern: 'FFFF 111 2026 999', description: 'Any 3 suits', points: 50 },
-            { pattern: 'F 22 F 44 F 66 F 8888', description: 'Any 3 suits, 2\'s and 8\'s same suit', points: 75 },
-            { pattern: 'FFF 11 2345678 99', description: 'Any 1 or 2 suits', points: 75 },
-            { pattern: 'FF 123456789 D FF', description: 'Any 1 suit, matching dragon', points: 100 },
+            { segments: [S('FFF', 'n'), S(' 1111', 'a'), S(' FFF', 'n'), S(' DD', 'b'), S(' DD', 'c')], description: 'Any 3 suits, kong any no., pairs opp. dragons', points: 50 },
+            { segments: [S('FFFF', 'n'), S(' 111', 'a'), S(' 2', 'b'), S('0', 'n'), S('2', 'b'), S('6', 'b'), S(' 999', 'c')], description: 'Any 3 suits', points: 50 },
+            { segments: [S('F', 'n'), S(' 22', 'a'), S(' F', 'n'), S(' 44', 'b'), S(' F', 'n'), S(' 66', 'c'), S(' F', 'n'), S(' 8888', 'a')], description: 'Any 3 suits, 2\'s and 8\'s same suit', points: 75 },
+            { segments: [S('FFF', 'n'), S(' 11', 'a'), S(' 2345678', 'a'), S(' 99', 'a')], description: 'Any 1 or 2 suits', points: 75 },
+            { segments: [S('FF', 'n'), S(' 123456789', 'a'), S(' D', 'a'), S(' FF', 'n')], description: 'Any 1 suit, matching dragon', points: 100 },
         ]
     },
     {
         name: 'Consecutive Numbers',
         hands: [
-            { pattern: '1123 1111 D 1111 D', description: 'Any 3 consec. nos, pair any no. in run, kongs match pair', points: 50 },
-            { pattern: 'FFFF 11 222 333 44', description: 'Any 2 suits, any 4 consec. nos', points: 50 },
-            { pattern: '11 22 333444 5555', description: 'Any 1 or 2 suits, any 5 consec. nos', points: 50 },
-            { pattern: '112 112233 112233', description: 'Any 3 suits, any 3 consec. nos', points: 50 },
-            { pattern: '111 23 44 11 23 444', description: 'Any 2 suits, any 4 consec. nos', points: 75 },
-            { pattern: 'NEWS 11 22 33 44 55', description: 'Any 2 suits, any 5 consec. nos', points: 100 },
+            { segments: [S('1123', 'a'), S(' 1111', 'b'), S(' D', 'a'), S(' 1111', 'c'), S(' D', 'a')], description: 'Any 3 consec. nos, pair any no. in run, kongs match pair', points: 50 },
+            { segments: [S('FFFF', 'n'), S(' 11', 'a'), S(' 222', 'b'), S(' 333', 'a'), S(' 44', 'b')], description: 'Any 2 suits, any 4 consec. nos', points: 50 },
+            { segments: [S('11', 'a'), S(' 22', 'a'), S(' 333', 'a'), S('444', 'a'), S(' 5555', 'a')], description: 'Any 1 or 2 suits, any 5 consec. nos', points: 50 },
+            { segments: [S('112', 'a'), S(' 112233', 'b'), S(' 112233', 'c')], description: 'Any 3 suits, any 3 consec. nos', points: 50 },
+            { segments: [S('111', 'a'), S(' 23', 'a'), S(' 44', 'a'), S(' 11', 'b'), S(' 23', 'b'), S(' 444', 'b')], description: 'Any 2 suits, any 4 consec. nos', points: 75 },
+            { segments: [S('NEWS', 'n'), S(' 11', 'a'), S(' 22', 'b'), S(' 33', 'a'), S(' 44', 'b'), S(' 55', 'a')], description: 'Any 2 suits, any 5 consec. nos', points: 100 },
         ]
     },
     {
         name: 'Same Number',
         hands: [
-            { pattern: 'FFFF 111 DD 111 DD', description: 'Any 2 suits', points: 50 },
-            { pattern: '111 1111 111 NNNN', description: 'Any 3 suits, any wind', points: 50 },
-            { pattern: 'FFF 1111 FFF 1111', description: 'Any 2 suits', points: 50 },
-            { pattern: 'FF 11 FF FF NNNN', description: 'Any 2 suits, pairs any same no., kong any wind', points: 75 },
-            { pattern: 'FF 11 D 11 D 11 D 11 D', description: 'Any 1 suit', points: 100 },
+            { segments: [S('FFFF', 'n'), S(' 111', 'a'), S(' DD', 'a'), S(' 111', 'b'), S(' DD', 'b')], description: 'Any 2 suits', points: 50 },
+            { segments: [S('111', 'a'), S(' 1111', 'b'), S(' 111', 'c'), S(' NNNN', 'n')], description: 'Any 3 suits, any wind', points: 50 },
+            { segments: [S('FFF', 'n'), S(' 1111', 'a'), S(' FFF', 'n'), S(' 1111', 'b')], description: 'Any 2 suits', points: 50 },
+            { segments: [S('FF', 'n'), S(' 11', 'a'), S(' FF', 'n'), S(' FF', 'n'), S(' NNNN', 'n')], description: 'Any 2 suits, pairs any same no., kong any wind', points: 75 },
+            { segments: [S('FF', 'n'), S(' 11', 'a'), S(' D', 'a'), S(' 11', 'a'), S(' D', 'a'), S(' 11', 'a'), S(' D', 'a'), S(' 11', 'a'), S(' D', 'a')], description: 'Any 1 suit', points: 100 },
         ]
     },
     {
         name: 'Windy Dragons',
         hands: [
-            { pattern: 'NNN EEE WWW SSS 11', description: '1 suit, pair any no.', points: 50 },
-            { pattern: 'FFFF 1111 DDD DDD', description: 'Any 3 suits, any no., pungs opp. dragons', points: 50 },
-            { pattern: 'EEE WWW 111 111 DD', description: 'Any 3 suits, any same odd no.', points: 50 },
-            { pattern: 'NNN SSS 222 222 DD', description: 'Any 3 suits, any same even no.', points: 50 },
-            { pattern: 'NEWS 1111 2222 DD', description: 'Any 2 suits, any 2 consec. nos', points: 50 },
-            { pattern: 'NN EE WW SS DDD DDD', description: 'Any 2 suits, any 6 consec. nos', points: 75 },
-            { pattern: 'NEWS 123 NEWS 456', description: 'Any 2 suits', points: 100 },
+            { segments: [S('NNN', 'n'), S(' EEE', 'n'), S(' WWW', 'n'), S(' SSS', 'n'), S(' 11', 'a')], description: '1 suit, pair any no.', points: 50 },
+            { segments: [S('FFFF', 'n'), S(' 1111', 'a'), S(' DDD', 'b'), S(' DDD', 'c')], description: 'Any 3 suits, any no., pungs opp. dragons', points: 50 },
+            { segments: [S('EEE', 'n'), S(' WWW', 'n'), S(' 111', 'a'), S(' 111', 'b'), S(' DD', 'c')], description: 'Any 3 suits, any same odd no.', points: 50 },
+            { segments: [S('NNN', 'n'), S(' SSS', 'n'), S(' 222', 'a'), S(' 222', 'b'), S(' DD', 'c')], description: 'Any 3 suits, any same even no.', points: 50 },
+            { segments: [S('NEWS', 'n'), S(' 1111', 'a'), S(' 2222', 'b'), S(' DD', 'a')], description: 'Any 2 suits, any 2 consec. nos', points: 50 },
+            { segments: [S('NN', 'n'), S(' EE', 'n'), S(' WW', 'n'), S(' SS', 'n'), S(' DDD', 'a'), S(' DDD', 'b')], description: 'Any 2 suits, any 6 consec. nos', points: 75 },
+            { segments: [S('NEWS', 'n'), S(' 123', 'a'), S(' NEWS', 'n'), S(' 456', 'b')], description: 'Any 2 suits', points: 100 },
         ]
     },
     {
         name: 'Evens',
         hands: [
-            { pattern: '222 4444 6666 888', description: 'Any 2 suits', points: 50 },
-            { pattern: 'FF 222 444 666 888', description: 'Any 1 or 3 suits', points: 50 },
-            { pattern: 'FFFF 2222 444 66 8', description: 'Any 1 or 3 suits', points: 50 },
-            { pattern: '2222 NEWS 222 222', description: 'Any 3 suits, any same even no.', points: 50 },
-            { pattern: 'FF 2468 DD 222', description: 'Any 3 suits, pungs any same even no.', points: 75 },
-            { pattern: 'FF 2468 2468 2468', description: 'Any 3 suits', points: 100 },
+            { segments: [S('222', 'a'), S(' 4444', 'a'), S(' 6666', 'b'), S(' 888', 'b')], description: 'Any 2 suits', points: 50 },
+            { segments: [S('FF', 'n'), S(' 222', 'a'), S(' 444', 'b'), S(' 666', 'c'), S(' 888', 'a')], description: 'Any 1 or 3 suits', points: 50 },
+            { segments: [S('FFFF', 'n'), S(' 2222', 'a'), S(' 444', 'a'), S(' 66', 'a'), S(' 8', 'a')], description: 'Any 1 or 3 suits', points: 50 },
+            { segments: [S('2222', 'a'), S(' NEWS', 'n'), S(' 222', 'b'), S(' 222', 'c')], description: 'Any 3 suits, any same even no.', points: 50 },
+            { segments: [S('FF', 'n'), S(' 2468', 'a'), S(' DD', 'b'), S(' 222', 'c')], description: 'Any 3 suits, pungs any same even no.', points: 75 },
+            { segments: [S('FF', 'n'), S(' 2468', 'a'), S(' 2468', 'b'), S(' 2468', 'c')], description: 'Any 3 suits', points: 100 },
         ]
     },
     {
         name: 'Odds',
         hands: [
-            { pattern: 'FF 1 D 333 55 777 9 D', description: 'Any 3 suits', points: 50 },
-            { pattern: '1111 33 55 77 99999', description: 'Any 1 or 3 suits', points: 50 },
-            { pattern: 'FFF 1111 3333 DDD', description: 'Any 3 suits, kongs any odd consec. nos.', points: 50 },
-            { pattern: 'FFF 111 33 55 77 99', description: 'Any 3 suits', points: 75 },
-            { pattern: '11 3 5 77 11 3 5 77 DD', description: 'Any 3 suits', points: 100 },
+            { segments: [S('FF', 'n'), S(' 1', 'a'), S(' D', 'a'), S(' 333', 'b'), S(' 55', 'a'), S(' 777', 'c'), S(' 9', 'a'), S(' D', 'a')], description: 'Any 3 suits', points: 50 },
+            { segments: [S('1111', 'a'), S(' 33', 'a'), S(' 55', 'a'), S(' 77', 'a'), S(' 99999', 'a')], description: 'Any 1 or 3 suits', points: 50 },
+            { segments: [S('FFF', 'n'), S(' 1111', 'a'), S(' 3333', 'b'), S(' DDD', 'c')], description: 'Any 3 suits, kongs any odd consec. nos.', points: 50 },
+            { segments: [S('FFF', 'n'), S(' 111', 'a'), S(' 33', 'b'), S(' 55', 'a'), S(' 77', 'b'), S(' 99', 'a')], description: 'Any 3 suits', points: 75 },
+            { segments: [S('11', 'a'), S(' 3', 'a'), S(' 5', 'a'), S(' 77', 'a'), S(' 11', 'b'), S(' 3', 'b'), S(' 5', 'b'), S(' 77', 'b'), S(' DD', 'c')], description: 'Any 3 suits', points: 100 },
         ]
     },
     {
         name: 'Lucky Eights',
         hands: [
-            { pattern: '111 8888 111 8888', description: 'Any 2 suits', points: 50 },
-            { pattern: 'FF 2222 + 6666 = 8888', description: 'Any 3 suits', points: 50 },
-            { pattern: 'FF 3333 + 5555 = 8888', description: 'Any 3 suits', points: 50 },
-            { pattern: '8888 DDD 8888 DDD', description: 'Any 2 suits, matching dragons', points: 50 },
-            { pattern: 'FF 22+66−88 DDD DDD', description: 'Any 3 suits', points: 75 },
-            { pattern: 'FF 11+77−88 22+66−88', description: 'Any 2 suits', points: 100 },
+            { segments: [S('111', 'a'), S(' 8888', 'a'), S(' 111', 'b'), S(' 8888', 'b')], description: 'Any 2 suits', points: 50 },
+            { segments: [S('FF', 'n'), S(' 2222', 'a'), S(' + ', 'n'), S('6666', 'b'), S(' = ', 'n'), S('8888', 'c')], description: 'Any 3 suits', points: 50 },
+            { segments: [S('FF', 'n'), S(' 3333', 'a'), S(' + ', 'n'), S('5555', 'b'), S(' = ', 'n'), S('8888', 'c')], description: 'Any 3 suits', points: 50 },
+            { segments: [S('8888', 'a'), S(' DDD', 'a'), S(' 8888', 'b'), S(' DDD', 'b')], description: 'Any 2 suits, matching dragons', points: 50 },
+            { segments: [S('FF', 'n'), S(' 22', 'a'), S('+', 'n'), S('66', 'b'), S('−', 'n'), S('88', 'c'), S(' DDD', 'a'), S(' DDD', 'b')], description: 'Any 3 suits', points: 75 },
+            { segments: [S('FF', 'n'), S(' 11', 'a'), S('+', 'n'), S('77', 'a'), S('−', 'n'), S('88', 'a'), S(' 22', 'b'), S('+', 'n'), S('66', 'b'), S('−', 'n'), S('88', 'b')], description: 'Any 2 suits', points: 100 },
         ]
     },
 ];

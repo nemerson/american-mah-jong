@@ -114,9 +114,42 @@
     flex: 1;
     font-family: 'Courier New', monospace;
     font-size: 0.7rem;
-    font-weight: 600;
-    color: #e2e8f0;
+    font-weight: 700;
     letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+
+/* Suit colors — visually distinct, high contrast on dark background */
+.suit-a {
+    color: #60a5fa;
+    /* Blue — Suit 1 */
+}
+
+.suit-b {
+    color: #f87171;
+    /* Red — Suit 2 */
+}
+
+.suit-c {
+    color: #4ade80;
+    /* Green — Suit 3 */
+}
+
+.suit-n {
+    color: #94a3b8;
+    /* Gray — Neutral (flowers, winds, soaps) */
+}
+
+.hand-desc {
+    font-size: 0.55rem;
+    color: var(--text-secondary);
+    opacity: 0.6;
+    min-width: 80px;
+    text-align: right;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
 }
 
 .hand-points {
@@ -141,4 +174,14 @@
 .pts-100 {
     background: rgba(239, 68, 68, 0.2);
     color: #fca5a5;
+}
+
+.suit-legend {
+    display: flex;
+    gap: 12px;
+    padding: 4px 6px;
+    font-size: 0.55rem;
+    opacity: 0.6;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    margin-top: 4px;
 }
