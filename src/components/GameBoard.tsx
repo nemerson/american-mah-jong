@@ -14,7 +14,6 @@ export const GameBoard: React.FC = () => {
     // Basic state initialization for MVP
     const [gameState, setGameState] = useState<GameState | null>(null);
     const [selectedTileIds, setSelectedTileIds] = useState<string[]>([]);
-    const [showWinningHands, setShowWinningHands] = useState(false);
     const [statusMessage, setStatusMessage] = useState<string | null>(null);
     const isReordering = useRef(false);
 
@@ -177,17 +176,6 @@ export const GameBoard: React.FC = () => {
 
     return (
         <div className="game-board">
-            {showWinningHands && (
-                <WinningHandsReference onClose={() => setShowWinningHands(false)} />
-            )}
-
-            <button
-                className="action-btn reference-btn"
-                onClick={() => setShowWinningHands(true)}
-            >
-                📖 Winning Hands
-            </button>
-
             {/* Top Area: Opponent (Across) */}
             <div className="opponent-across">
                 <div className="player-label">{gameState.players[2].name}</div>
@@ -246,6 +234,7 @@ export const GameBoard: React.FC = () => {
 
             {/* Bottom Area: Human Player */}
             <div className="human-player-area">
+                <WinningHandsReference />
                 <div className="tile-count">Your tiles: {humanPlayer.hand.length}</div>
                 <div className="player-actions">
                     {gameState.phase === 'charleston' ? (
