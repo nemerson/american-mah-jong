@@ -1,0 +1,129 @@
+.mahjong-tile {
+    position: relative;
+    width: 60px;
+    height: 80px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    user-select: none;
+    transform-style: preserve-3d;
+}
+
+.tile-face {
+    position: absolute;
+    inset: 0;
+    background: var(--tile-bg);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--tile-border);
+    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.05), var(--shadow-sm);
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backface-visibility: hidden;
+    overflow: hidden;
+}
+
+/* 3D Depth Effect */
+.tile-depth {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    right: -4px;
+    bottom: -4px;
+    background: #d1d5db;
+    /* Slate 300 base */
+    border-radius: var(--radius-sm);
+    border: 1px solid #94a3b8;
+    z-index: 1;
+    box-shadow: var(--shadow-md);
+}
+
+.selected .tile-face {
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 10px rgba(59, 130, 246, 0.4), inset 0 0 10px rgba(59, 130, 246, 0.1);
+}
+
+.selected .tile-depth {
+    background: #bfdbfe;
+    border-color: #60a5fa;
+}
+
+.tile-back {
+    width: 100%;
+    height: 100%;
+    background: repeating-linear-gradient(45deg,
+            #f8fafc,
+            #f8fafc 10px,
+            #f1f5f9 10px,
+            #f1f5f9 20px);
+}
+
+/* Content Styling inside the tile */
+.tile-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    font-weight: 800;
+}
+
+.tile-value {
+    font-size: 1.25rem;
+    position: absolute;
+    top: 4px;
+    left: 6px;
+}
+
+.tile-icon {
+    font-size: 2rem;
+    margin-top: 10px;
+}
+
+/* Suit Colors */
+.suit-bams {
+    color: var(--accent-green);
+}
+
+.suit-craks {
+    color: var(--accent-red);
+}
+
+.suit-dots {
+    color: var(--accent-blue);
+}
+
+.wind-tile {
+    color: #475569;
+    font-size: 2.25rem;
+}
+
+.dragon-red {
+    color: var(--accent-red);
+    font-size: 2rem;
+}
+
+.dragon-green {
+    color: var(--accent-green);
+    font-size: 2rem;
+}
+
+.dragon-white {
+    color: var(--accent-blue);
+    font-size: 2rem;
+}
+
+.flower-tile {
+    font-size: 2.5rem;
+}
+
+.joker-tile {
+    color: var(--accent-gold);
+    font-size: 0.85rem;
+    writing-mode: vertical-rl;
+    text-orientation: upright;
+    letter-spacing: -3px;
+    height: 100%;
+    margin-top: 5px;
+}

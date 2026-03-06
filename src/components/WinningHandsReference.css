@@ -1,0 +1,120 @@
+.winning-hands-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(15, 23, 42, 0.8);
+    backdrop-filter: blur(5px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.winning-hands-modal {
+    background: var(--bg-surface);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-lg);
+    width: 90%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 25px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: var(--accent-gold);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 2rem;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0;
+    transition: color 0.2s;
+}
+
+.close-btn:hover {
+    color: var(--text-primary);
+}
+
+.modal-content {
+    padding: 25px;
+}
+
+.intro-text {
+    color: var(--text-secondary);
+    margin-bottom: 25px;
+    line-height: 1.5;
+}
+
+.pattern-card {
+    background: rgba(0, 0, 0, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: var(--radius-md);
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.pattern-card:last-child {
+    margin-bottom: 0;
+}
+
+.pattern-card h3 {
+    margin: 0 0 10px 0;
+    color: var(--text-primary);
+    font-size: 1.2rem;
+}
+
+.pattern-math {
+    font-family: monospace;
+    font-size: 1.1rem;
+    color: var(--accent-blue);
+    margin-bottom: 10px;
+    background: rgba(59, 130, 246, 0.1);
+    padding: 5px 10px;
+    border-radius: 4px;
+    display: inline-block;
+}
+
+.pattern-card p {
+    color: var(--text-secondary);
+    margin: 0 0 15px 0;
+}
+
+.joker-rules {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+.joker-rules li {
+    color: var(--text-secondary);
+    margin-bottom: 5px;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 0.9rem;
+}
+
+.joker-rules li:last-child {
+    margin-bottom: 0;
+}

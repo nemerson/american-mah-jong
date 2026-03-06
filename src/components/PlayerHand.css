@@ -1,0 +1,39 @@
+.player-hand-container {
+    display: flex;
+    justify-content: center;
+    padding: 20px;
+    width: 100%;
+}
+
+.tiles-row {
+    display: flex;
+    gap: 4px;
+    align-items: flex-end;
+}
+
+/* Add slight variations to starting animations so they stagger nicely when dealt */
+.hand-tile-anim-0 {
+    animation-delay: 0.0s;
+}
+
+.hand-tile-anim-1 {
+    animation-delay: 0.05s;
+}
+
+.hand-tile-anim-2 {
+    animation-delay: 0.1s;
+}
+
+.hand-tile-anim-3 {
+    animation-delay: 0.15s;
+}
+
+.hand-tile-anim-4 {
+    animation-delay: 0.2s;
+}
+
+.reorder-row {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+}

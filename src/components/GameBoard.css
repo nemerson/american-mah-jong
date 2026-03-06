@@ -1,0 +1,224 @@
+.game-board {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    background: radial-gradient(circle at center, var(--bg-surface), var(--bg-board));
+    padding: 20px;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.player-label {
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 2px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+    text-align: center;
+}
+
+.opponent-across {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transform: rotate(180deg);
+}
+
+.middle-section {
+    flex: 1 1 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 40px;
+}
+
+.opponent-left,
+.opponent-right {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.opponent-left {
+    transform: rotate(90deg);
+}
+
+.opponent-right {
+    transform: rotate(-90deg);
+}
+
+.vertical-hand {
+    background: rgba(0, 0, 0, 0.2);
+    padding: 10px 20px;
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.tile-placeholder-count {
+    font-size: 1.5rem;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.center-table {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    flex: 1;
+}
+
+.phase-indicator {
+    font-size: 1.5rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    color: var(--accent-gold);
+}
+
+.wall-counter {
+    background: rgba(0, 0, 0, 0.4);
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+}
+
+.discard-pile {
+    min-width: 200px;
+    min-height: 120px;
+    background: rgba(0, 0, 0, 0.2);
+    border: 2px dashed rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.empty-discards {
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+.recent-discards-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    justify-content: center;
+    padding: 10px;
+    max-width: 350px;
+}
+
+.discarded-tile-wrapper {
+    transform: scale(0.8);
+    /* Make discards slightly smaller */
+    transform-origin: center center;
+    transition: all 0.2s ease-in-out;
+}
+
+.discarded-tile-wrapper:hover {
+    transform: scale(0.9) translateY(-2px);
+    z-index: 10;
+}
+
+.human-player-area {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: auto;
+}
+
+.player-actions {
+    display: flex;
+    gap: 15px;
+    margin-bottom: -10px;
+    /* Overlap hand slightly */
+    z-index: 10;
+}
+
+.action-btn {
+    background: var(--bg-surface);
+    color: var(--text-primary);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 10px 24px;
+    border-radius: 20px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: var(--shadow-md);
+}
+
+.reference-btn {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 50;
+    padding: 8px 16px;
+    font-size: 0.8rem;
+    background: rgba(0, 0, 0, 0.4);
+}
+
+.action-btn:hover:not(:disabled) {
+    background: #475569;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+}
+
+.action-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.action-btn.primary-btn {
+    background: var(--accent-blue);
+    border-color: #60a5fa;
+    box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+}
+
+.action-btn.primary-btn:hover {
+    background: #2563eb;
+    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.6);
+}
+
+.status-message {
+    position: fixed;
+    bottom: 220px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(15, 23, 42, 0.95);
+    border: 1px solid var(--accent-gold);
+    color: var(--accent-gold);
+    padding: 12px 28px;
+    border-radius: var(--radius-lg);
+    font-size: 1.1rem;
+    font-weight: 600;
+    z-index: 100;
+    text-align: center;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    animation: fadeInUp 0.3s ease;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+.tile-count {
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    text-align: center;
+    margin-bottom: 4px;
+    opacity: 0.7;
+}
