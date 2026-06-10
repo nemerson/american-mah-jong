@@ -1,7 +1,8 @@
 import { useEffect, useRef } from 'react';
 import type { GameState } from '../types/mahjong';
 import { drawTile, discardTile, advanceTurn } from '../engine/game';
-import { decideBotDiscard } from '../engine/bot';
+import { decideBotDiscard, decideBotCall } from '../engine/bot';
+import { callDiscard, defaultCallTiles } from '../engine/calls';
 
 // Drives timed game progression: automatic draws, bot discards, and the
 // call-window countdown. The effect keys off the fields that mark real game
@@ -21,6 +22,7 @@ export function useGameLoop(gameState: GameState, setGameState: (next: GameState
     useEffect(() => {
         const state = stateRef.current;
         let timeoutId: ReturnType<typeof setTimeout> | undefined;
+        let botCallTimeoutId: ReturnType<typeof setTimeout> | undefined;
 
         if (state.phase === 'draw') {
             timeoutId = setTimeout(() => {
@@ -40,6 +42,24 @@ export function useGameLoop(gameState: GameState, setGameState: (next: GameState
                 }, 1000);
             }
         } else if (state.phase === 'call') {
+            // Bots consider calling partway through the window, in turn order
+            // after the discarder, so the human gets first shot at the tile
+            botCallTimeoutId = setTimeout(() => {
+                const s = stateRef.current;
+                if (s.phase !== 'call' || s.discards.length === 0) return;
+                const discard = s.discards[s.discards.length - 1];
+                for (let offset = 1; offset < s.players.length; offset++) {
+                    const idx = (s.currentPlayerIndex + offset) % s.players.length;
+                    const bot = s.players[idx];
+                    if (!bot.isBot || !decideBotCall(bot, discard)) continue;
+                    const tiles = defaultCallTiles(bot, discard);
+                    if (tiles) {
+                        setGameState(callDiscard(s, idx, tiles.map(t => t.id)));
+                        return;
+                    }
+                }
+            }, 2500);
+
             // Give the player a window to call the discard before play moves on
             timeoutId = setTimeout(() => {
                 const s = stateRef.current;
@@ -48,6 +68,9 @@ export function useGameLoop(gameState: GameState, setGameState: (next: GameState
             }, 5000);
         }
 
-        return () => clearTimeout(timeoutId);
+        return () => {
+            clearTimeout(timeoutId);
+            clearTimeout(botCallTimeoutId);
+        };
     }, [phase, currentPlayerIndex, wallCount, discardCount, setGameState]);
 }

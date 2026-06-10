@@ -5,39 +5,6 @@ import { internationalMahjongCard } from './cardData';
 
 export type { WinResult } from './handMatcher';
 
-export function canCallTile(player: Player, discard: Tile): boolean {
-    // Basic validation: Can we make an exposure (Pung, Kong, Quint) with this discard?
-    // Exclude jokers from being called themselves
-    if (discard.type === 'joker') return false;
-
-    // Count how many matching tiles the player has in hand
-    let matchCount = 0;
-    for (const t of player.hand) {
-        if (t.type === discard.type) {
-            if (t.type === 'suit' && discard.type === 'suit' && t.suit === discard.suit && t.value === discard.value) {
-                matchCount++;
-            } else if (t.type === 'wind' && discard.type === 'wind' && t.wind === discard.wind) {
-                matchCount++;
-            } else if (t.type === 'dragon' && discard.type === 'dragon' && t.dragon === discard.dragon) {
-                matchCount++;
-            } else if (t.type === 'flower' && discard.type === 'flower') {
-                // Flowers usually match any other flower in basic play styles
-                matchCount++;
-            }
-        }
-    }
-
-    const jokerCount = player.hand.filter(t => t.type === 'joker').length;
-
-    // Can call for a Pung (needs 2 matches + discard = 3)
-    // At least 1 natural match is required (can't call with 2 jokers)
-    if (matchCount >= 2 || (matchCount >= 1 && jokerCount >= 1)) {
-        return true;
-    }
-
-    return false;
-}
-
 export type TileCounts = {
     counts: Map<string, number>;
     jokers: number;

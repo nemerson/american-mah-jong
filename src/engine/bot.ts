@@ -1,5 +1,5 @@
 import type { Player, Tile } from '../types/mahjong';
-import { canCallTile } from './rules';
+import { getTileKey } from './rules';
 
 // Very basic bot that prioritizes keeping pairs/pungs and discards generic tiles
 export function decideBotDiscard(bot: Player): Tile {
@@ -46,9 +46,12 @@ export function decideBotDiscard(bot: Player): Tile {
 }
 
 export function decideBotCall(bot: Player, discard: Tile): boolean {
-    // Basic bot only calls if it already has a pair of the discarded tile
-    // canCallTile already checks for a pair (or pair + joker)
-    return canCallTile(bot, discard);
+    // Only call with two natural matches in hand (a real pung) — the bot
+    // never spends a joker on a call
+    if (discard.type === 'joker') return false;
+    const key = getTileKey(discard);
+    const matches = bot.hand.filter(t => t.type !== 'joker' && getTileKey(t) === key).length;
+    return matches >= 2;
 }
 
 export function decideBotCharlestonPass(bot: Player, count: number): Tile[] {

@@ -4,12 +4,30 @@ import { initializeGame, discardTile, reorderPlayerHand } from '../engine/game';
 import { executeCharlestonPasses } from '../engine/charleston';
 import type { CharlestonPass } from '../engine/charleston';
 import { decideBotCharlestonPass } from '../engine/bot';
-import { checkMahJong } from '../engine/rules';
+import { checkMahJong, getTileKey } from '../engine/rules';
+import { callDiscard, defaultCallTiles, exchangeJoker, findExposedJokers } from '../engine/calls';
 import { useGameLoop } from '../hooks/useGameLoop';
 import { PlayerHand } from './PlayerHand';
 import { MahJongTile } from './Tile';
 import { WinningHandsReference } from './WinningHandsReference';
 import './GameBoard.css';
+
+const ExposureDisplay: React.FC<{ exposures: Tile[][] }> = ({ exposures }) => {
+    if (exposures.length === 0) return null;
+    return (
+        <div className="exposures-row">
+            {exposures.map((exposure, i) => (
+                <div key={i} className="exposure-group">
+                    {exposure.map(tile => (
+                        <div key={tile.id} className="exposure-tile-wrapper">
+                            <MahJongTile tile={tile} />
+                        </div>
+                    ))}
+                </div>
+            ))}
+        </div>
+    );
+};
 
 export const GameBoard: React.FC = () => {
     const [gameState, setGameState] = useState<GameState>(() =>
@@ -48,35 +66,57 @@ export const GameBoard: React.FC = () => {
         setSelectedTileIds([]);
     };
 
-    const handleCall = () => {
-        if (gameState.phase !== 'call' || gameState.discards.length === 0) return;
+    const latestDiscard = gameState.discards.length > 0
+        ? gameState.discards[gameState.discards.length - 1]
+        : null;
 
-        // Simplified MVP Call: Human takes the tile into their hand and it becomes their turn to discard
-        const newState: GameState = {
-            ...gameState,
-            discards: [...gameState.discards],
-            players: [...gameState.players.map(p => ({ ...p, hand: [...p.hand] }))]
-        };
-        const tile = newState.discards.pop();
-        if (tile) {
-            newState.players[0].hand.push(tile);
-            newState.currentPlayerIndex = 0;
-            newState.phase = 'discard';
-            setGameState(newState);
-        }
+    // The human may call when someone else discarded and the tiles in hand
+    // can legally join the discard as an exposure
+    const canHumanCall = gameState.phase === 'call'
+        && gameState.currentPlayerIndex !== 0
+        && latestDiscard !== null
+        && defaultCallTiles(humanPlayer, latestDiscard) !== null;
+
+    const handleCall = () => {
+        if (!canHumanCall || !latestDiscard) return;
+        const tiles = defaultCallTiles(humanPlayer, latestDiscard);
+        if (!tiles) return;
+        setGameState(callDiscard(gameState, 0, tiles.map(t => t.id)));
+        setSelectedTileIds([]);
+        setStatusMessage(null);
+    };
+
+    // Joker exchange: on the human's turn before discarding, a selected
+    // natural tile matching a joker in any exposure may be swapped for it
+    const selectedTile = selectedTileIds.length === 1
+        ? humanPlayer.hand.find(t => t.id === selectedTileIds[0])
+        : undefined;
+    const jokerSwapTarget = (gameState.phase === 'discard'
+        && gameState.currentPlayerIndex === 0
+        && selectedTile
+        && selectedTile.type !== 'joker')
+        ? findExposedJokers(gameState).find(j => j.key === getTileKey(selectedTile))
+        : undefined;
+
+    const handleJokerSwap = () => {
+        if (!jokerSwapTarget || !selectedTile) return;
+        setGameState(exchangeJoker(gameState, 0, selectedTile.id, jokerSwapTarget.ownerIndex, jokerSwapTarget.exposureIndex));
+        setSelectedTileIds([]);
+        setStatusMessage('Swapped your tile for an exposed joker!');
+        setTimeout(() => setStatusMessage(null), 3000);
     };
 
     const handleCallMahJong = () => {
         let totalTiles = humanPlayer.hand.length;
         for (const exp of humanPlayer.exposures) totalTiles += exp.length;
 
-        let win = null;
-        if (gameState.phase === 'call' && gameState.discards.length > 0) {
-            const latestDiscard = gameState.discards[gameState.discards.length - 1];
-            win = checkMahJong(humanPlayer, latestDiscard);
-        } else {
-            win = checkMahJong(humanPlayer);
-        }
+        // A discard can complete the hand only if someone else threw it
+        const claimableDiscard = gameState.phase === 'call' && gameState.currentPlayerIndex !== 0
+            ? latestDiscard
+            : null;
+        const win = claimableDiscard
+            ? checkMahJong(humanPlayer, claimableDiscard)
+            : checkMahJong(humanPlayer);
 
         if (win) {
             setStatusMessage(`🀄 MAH JONG! ${win.section} #${win.handNumber} — ${win.points} points! 🎉`);
@@ -135,6 +175,7 @@ export const GameBoard: React.FC = () => {
             <div className="opponent-across">
                 <div className="player-label">{gameState.players[2].name}</div>
                 <PlayerHand hand={gameState.players[2].hand} isFaceDown={true} />
+                <ExposureDisplay exposures={gameState.players[2].exposures} />
             </div>
 
             {/* Middle Area: Left/Right Opponents + Discard Center */}
@@ -145,6 +186,7 @@ export const GameBoard: React.FC = () => {
                         {/* Simplified vertical representation */}
                         <div className="tile-placeholder-count">🀄 x{gameState.players[3].hand.length}</div>
                     </div>
+                    <ExposureDisplay exposures={gameState.players[3].exposures} />
                 </div>
 
                 <div className="center-table">
@@ -179,6 +221,7 @@ export const GameBoard: React.FC = () => {
                     <div className="vertical-hand">
                         <div className="tile-placeholder-count">🀄 x{gameState.players[1].hand.length}</div>
                     </div>
+                    <ExposureDisplay exposures={gameState.players[1].exposures} />
                 </div>
             </div>
 
@@ -190,6 +233,7 @@ export const GameBoard: React.FC = () => {
             {/* Bottom Area: Human Player */}
             <div className="human-player-area">
                 <WinningHandsReference />
+                <ExposureDisplay exposures={humanPlayer.exposures} />
                 <div className="tile-count">Your tiles: {humanPlayer.hand.length}</div>
                 <div className="player-actions">
                     {gameState.phase === 'charleston' ? (
@@ -211,11 +255,19 @@ export const GameBoard: React.FC = () => {
                             </button>
                             <button
                                 className="action-btn"
-                                disabled={gameState.phase !== 'call'}
+                                disabled={!canHumanCall}
                                 onClick={handleCall}
                             >
                                 Call Discard
                             </button>
+                            {jokerSwapTarget && (
+                                <button
+                                    className="action-btn"
+                                    onClick={handleJokerSwap}
+                                >
+                                    Swap for Joker
+                                </button>
+                            )}
                             <button
                                 className="action-btn primary-btn"
                                 onClick={handleCallMahJong}
