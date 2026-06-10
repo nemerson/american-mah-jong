@@ -1,15 +1,18 @@
 import { describe, it, expect } from 'vitest';
 import { checkPattern, countTiles } from './rules';
-import type { Tile } from '../types/mahjong';
+import type { Tile, Suit, Wind, Dragon, FlowerTile, SuitedTile } from '../types/mahjong';
 
 describe('Mah Jong Win Condition Engine', () => {
 
-    const createTile = (type: Tile['type'], id: string, extra?: any): Tile => {
+    type TileExtra = string | number | { suit?: string; value?: number };
+
+    const createTile = (type: Tile['type'], id: string, extra?: TileExtra): Tile => {
         if (type === 'joker') return { id, type };
-        if (type === 'flower') return { id, type, value: extra || 1 };
-        if (type === 'dragon') return { id, type, dragon: extra || 'red' };
-        if (type === 'wind') return { id, type, wind: extra || 'east' };
-        return { id, type: 'suit', suit: extra?.suit || 'bam', value: extra?.value || 1 } as Tile;
+        if (type === 'flower') return { id, type, value: (extra as FlowerTile['value']) || 1 };
+        if (type === 'dragon') return { id, type, dragon: (extra as Dragon) || 'red' };
+        if (type === 'wind') return { id, type, wind: (extra as Wind) || 'east' };
+        const e = extra as { suit?: string; value?: number } | undefined;
+        return { id, type: 'suit', suit: (e?.suit || 'bam') as Suit, value: (e?.value || 1) as SuitedTile['value'] };
     };
 
     describe('countTiles helper', () => {

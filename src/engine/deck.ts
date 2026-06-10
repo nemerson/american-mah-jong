@@ -1,4 +1,4 @@
-import type { Tile, Suit, Wind, Dragon } from '../types/mahjong';
+import type { Tile, Suit, Wind, Dragon, SuitedTile, FlowerTile } from '../types/mahjong';
 import { v4 as uuidv4 } from 'uuid'; // Generate unique IDs for each tile
 
 // Standard American Mah Jong deck has 152 tiles:
@@ -20,7 +20,7 @@ export function generateDeck(): Tile[] {
     for (const suit of suits) {
         for (let value = 1; value <= 9; value++) {
             for (let i = 0; i < 4; i++) {
-                addTile({ type: 'suit', suit, value: value as any } as unknown as Tile);
+                addTile({ type: 'suit', suit, value: value as SuitedTile['value'] } as unknown as Tile);
             }
         }
     }
@@ -44,7 +44,7 @@ export function generateDeck(): Tile[] {
     // Flowers
     for (let i = 0; i < 8; i++) {
         // Simplification: treating all flowers identically for now, though traditionally they have pairs/seasons
-        addTile({ type: 'flower', value: (i % 4) + 1 as any } as unknown as Tile);
+        addTile({ type: 'flower', value: ((i % 4) + 1) as FlowerTile['value'] } as unknown as Tile);
     }
 
     // Jokers

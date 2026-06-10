@@ -1,8 +1,8 @@
-import type { Player, GameState, Tile } from '../types/mahjong';
+import type { Player, Tile } from '../types/mahjong';
 import { canCallTile } from './rules';
 
 // Very basic bot that prioritizes keeping pairs/pungs and discards generic tiles
-export function decideBotDiscard(bot: Player, _state: GameState): Tile {
+export function decideBotDiscard(bot: Player): Tile {
     const hand = bot.hand;
 
     // Group tiles by type and value
@@ -51,7 +51,7 @@ export function decideBotCall(bot: Player, discard: Tile): boolean {
     return canCallTile(bot, discard);
 }
 
-export function decideBotCharlestonPass(bot: Player, _state: GameState, count: number): Tile[] {
+export function decideBotCharlestonPass(bot: Player, count: number): Tile[] {
     // Very naive bot: pick `count` tiles that are singletons, or random non-jokers
     const hand = bot.hand;
     const nonJokers = hand.filter(t => t.type !== 'joker');

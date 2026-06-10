@@ -1,12 +1,9 @@
 import type { Tile, Player } from '../types/mahjong';
+import type { WinResult } from './handMatcher';
+import { matchVariant } from './handMatcher';
+import { internationalMahjongCard } from './cardData';
 
-// American Mah Jong has very specific hands based on an annual card.
-// Doing full real-world validation would require encoding the entire 2024/2025 NMJL card.
-// For this MVP, we will define a simplified generic win condition:
-// A valid Mah Jong is 14 tiles (incl. exposures) forming either:
-// - 4 Pungs (3 of a kind) + 1 Pair
-// - 1 Quint (5 of a kind), 1 Kong (4), 1 Pung (3), 1 Pair (2) (Sum = 14)
-// Jokers can substitute for any tile in a Pung/Kong/Quint, but never in a Pair.
+export type { WinResult } from './handMatcher';
 
 export function canCallTile(player: Player, discard: Tile): boolean {
     // Basic validation: Can we make an exposure (Pung, Kong, Quint) with this discard?
@@ -118,25 +115,34 @@ export function checkPattern(counts: Map<string, number>, jokers: number, requir
     return false;
 }
 
-// Check against MVP generalized rules
-export function checkMahJong(player: Player, discard?: Tile): boolean {
+/**
+ * Validate a full 14-tile hand (concealed tiles + exposures + an optional
+ * just-discarded tile) against every hand on the card. Returns the first
+ * matching card hand with its points, or null if nothing matches.
+ */
+export function checkMahJong(player: Player, discard?: Tile): WinResult | null {
     const allTiles = [...player.hand];
     if (discard) allTiles.push(discard);
     for (const exp of player.exposures) {
         allTiles.push(...exp);
     }
 
-    if (allTiles.length !== 14) return false;
+    if (allTiles.length !== 14) return null;
 
-    const { counts, jokers } = countTiles(allTiles);
-
-    const standardPattern = [4, 3, 3, 2, 2];
-    const quintPattern = [5, 4, 3, 2];
-    const pairsPattern = [2, 2, 2, 2, 2, 2, 2];
-
-    if (checkPattern(new Map(counts), jokers, standardPattern)) return true;
-    if (checkPattern(new Map(counts), jokers, quintPattern)) return true;
-    if (jokers === 0 && checkPattern(new Map(counts), 0, pairsPattern)) return true;
-
-    return false;
+    for (const section of internationalMahjongCard) {
+        for (let i = 0; i < section.hands.length; i++) {
+            const hand = section.hands[i];
+            for (const variant of hand.variants) {
+                if (matchVariant(allTiles, variant)) {
+                    return {
+                        section: section.name,
+                        handNumber: i + 1,
+                        description: hand.description,
+                        points: hand.points,
+                    };
+                }
+            }
+        }
+    }
+    return null;
 }

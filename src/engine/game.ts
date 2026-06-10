@@ -36,17 +36,17 @@ export function drawTile(state: GameState, playerIndex: number): GameState {
         return { ...state, phase: 'end' };
     }
 
-    const newState = { ...state };
-    const newWall = [...newState.wall];
+    const newWall = [...state.wall];
     const tile = newWall.shift();
 
-    if (tile) {
-        newState.wall = newWall;
-        newState.players[playerIndex].hand.push(tile);
-    }
-
-    newState.phase = 'discard';
-    return newState;
+    return {
+        ...state,
+        wall: newWall,
+        players: tile
+            ? state.players.map((p, i) => i === playerIndex ? { ...p, hand: [...p.hand, tile] } : p)
+            : state.players,
+        phase: 'discard'
+    };
 }
 
 export function discardTile(state: GameState, playerIndex: number, tileId: string): GameState {

@@ -34,7 +34,7 @@ export const PlayerHand: React.FC<PlayerHandProps> = ({
             wasDragged.current = false;
             return;
         }
-        onTileClick && onTileClick(tile);
+        onTileClick?.(tile);
     };
 
     if (onReorder) {

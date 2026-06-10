@@ -1,68 +1,25 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import type { GameState, Tile } from '../types/mahjong';
-import { initializeGame, drawTile, discardTile, advanceTurn, reorderPlayerHand } from '../engine/game';
+import { initializeGame, discardTile, reorderPlayerHand } from '../engine/game';
 import { executeCharlestonPasses } from '../engine/charleston';
 import type { CharlestonPass } from '../engine/charleston';
-import { decideBotCharlestonPass, decideBotDiscard } from '../engine/bot';
+import { decideBotCharlestonPass } from '../engine/bot';
 import { checkMahJong } from '../engine/rules';
+import { useGameLoop } from '../hooks/useGameLoop';
 import { PlayerHand } from './PlayerHand';
 import { MahJongTile } from './Tile';
 import { WinningHandsReference } from './WinningHandsReference';
 import './GameBoard.css';
 
 export const GameBoard: React.FC = () => {
-    // Basic state initialization for MVP
-    const [gameState, setGameState] = useState<GameState | null>(null);
+    const [gameState, setGameState] = useState<GameState>(() =>
+        initializeGame(['You', 'Bot 1', 'Bot 2', 'Bot 3']));
     const [selectedTileIds, setSelectedTileIds] = useState<string[]>([]);
     const [statusMessage, setStatusMessage] = useState<string | null>(null);
-    const isReordering = useRef(false);
 
-    useEffect(() => {
-        // Start a fresh game component mount
-        const newGame = initializeGame(['You', 'Bot 1', 'Bot 2', 'Bot 3']);
-        setGameState(newGame);
-    }, []);
-
-    useEffect(() => {
-        if (!gameState) return;
-
-        // Skip game loop processing if this was just a cosmetic reorder
-        if (isReordering.current) {
-            isReordering.current = false;
-            return;
-        }
-
-        let timeoutId: ReturnType<typeof setTimeout>;
-
-        // Main game loop driver
-        if (gameState.phase === 'draw') {
-            timeoutId = setTimeout(() => {
-                setGameState(drawTile(gameState, gameState.currentPlayerIndex));
-            }, 600);
-        } else if (gameState.phase === 'discard') {
-            const currentPlayer = gameState.players[gameState.currentPlayerIndex];
-            if (currentPlayer.isBot) {
-                timeoutId = setTimeout(() => {
-                    const discard = decideBotDiscard(currentPlayer, gameState);
-                    setGameState(discardTile(gameState, gameState.currentPlayerIndex, discard.id));
-                }, 1000);
-            }
-        } else if (gameState.phase === 'call') {
-            // MVP: Wait 5 seconds for a call so the player can decide.
-            timeoutId = setTimeout(() => {
-                setGameState(advanceTurn(gameState));
-            }, 5000);
-        }
-
-        return () => clearTimeout(timeoutId);
-    }, [gameState]);
-
-    if (!gameState) {
-        return <div className="flex-center" style={{ height: '100vh' }}>Loading Mah Jong...</div>;
-    }
+    useGameLoop(gameState, setGameState);
 
     const handleReorder = (newHand: Tile[]) => {
-        isReordering.current = true;
         setGameState(reorderPlayerHand(gameState, gameState.players[0].id, newHand));
     };
 
@@ -73,7 +30,7 @@ export const GameBoard: React.FC = () => {
             setSelectedTileIds(selectedTileIds.filter(id => id !== tile.id));
         } else {
             // In charleston, allow up to 3 selections
-            if (gameState?.phase === 'charleston') {
+            if (gameState.phase === 'charleston') {
                 const maxTiles = 3;
                 if (selectedTileIds.length < maxTiles) {
                     setSelectedTileIds([...selectedTileIds, tile.id]);
@@ -86,13 +43,13 @@ export const GameBoard: React.FC = () => {
     };
 
     const handleDiscard = () => {
-        if (!gameState || selectedTileIds.length !== 1 || gameState.phase !== 'discard' || gameState.currentPlayerIndex !== 0) return;
+        if (selectedTileIds.length !== 1 || gameState.phase !== 'discard' || gameState.currentPlayerIndex !== 0) return;
         setGameState(discardTile(gameState, 0, selectedTileIds[0]));
         setSelectedTileIds([]);
     };
 
     const handleCall = () => {
-        if (!gameState || gameState.phase !== 'call' || gameState.discards.length === 0) return;
+        if (gameState.phase !== 'call' || gameState.discards.length === 0) return;
 
         // Simplified MVP Call: Human takes the tile into their hand and it becomes their turn to discard
         const newState: GameState = {
@@ -110,21 +67,19 @@ export const GameBoard: React.FC = () => {
     };
 
     const handleCallMahJong = () => {
-        if (!gameState) return;
-
-        let isWin = false;
         let totalTiles = humanPlayer.hand.length;
         for (const exp of humanPlayer.exposures) totalTiles += exp.length;
 
+        let win = null;
         if (gameState.phase === 'call' && gameState.discards.length > 0) {
             const latestDiscard = gameState.discards[gameState.discards.length - 1];
-            isWin = checkMahJong(humanPlayer, latestDiscard);
+            win = checkMahJong(humanPlayer, latestDiscard);
         } else {
-            isWin = checkMahJong(humanPlayer);
+            win = checkMahJong(humanPlayer);
         }
 
-        if (isWin) {
-            setStatusMessage('🀄 MAH JONG! You Win! 🎉');
+        if (win) {
+            setStatusMessage(`🀄 MAH JONG! ${win.section} #${win.handNumber} — ${win.points} points! 🎉`);
             setGameState({ ...gameState, phase: 'end' });
         } else {
             if (totalTiles !== 14) {
@@ -137,17 +92,17 @@ export const GameBoard: React.FC = () => {
     };
 
     const handleCharlestonPass = () => {
-        const isCourtesy = gameState?.charlestonPhase === 'courtesy';
+        const isCourtesy = gameState.charlestonPhase === 'courtesy';
         const validCount = isCourtesy ? selectedTileIds.length <= 3 : selectedTileIds.length === 3;
 
-        if (!gameState || !gameState.charlestonPhase || !validCount) return;
+        if (!gameState.charlestonPhase || !validCount) return;
 
         const humanTiles = humanPlayer.hand.filter(t => selectedTileIds.includes(t.id));
 
         // Generate bot passes — each bot independently picks 0-3 tiles for courtesy
-        const bot1Tiles = decideBotCharlestonPass(gameState.players[1], gameState, isCourtesy ? Math.floor(Math.random() * 4) : 3);
-        const bot2Tiles = decideBotCharlestonPass(gameState.players[2], gameState, isCourtesy ? Math.floor(Math.random() * 4) : 3);
-        const bot3Tiles = decideBotCharlestonPass(gameState.players[3], gameState, isCourtesy ? Math.floor(Math.random() * 4) : 3);
+        const bot1Tiles = decideBotCharlestonPass(gameState.players[1], isCourtesy ? Math.floor(Math.random() * 4) : 3);
+        const bot2Tiles = decideBotCharlestonPass(gameState.players[2], isCourtesy ? Math.floor(Math.random() * 4) : 3);
+        const bot3Tiles = decideBotCharlestonPass(gameState.players[3], isCourtesy ? Math.floor(Math.random() * 4) : 3);
 
         const passes: CharlestonPass[] = [
             { fromIndex: 0, toIndex: -1, tiles: humanTiles },
@@ -162,7 +117,7 @@ export const GameBoard: React.FC = () => {
     };
 
     const getPassDirectionText = () => {
-        if (!gameState?.charlestonPhase) return '';
+        if (!gameState.charlestonPhase) return '';
         const p = gameState.charlestonPhase.toLowerCase();
         if (p.includes('right')) return 'Right';
         if (p.includes('across')) return 'Across';
@@ -171,7 +126,7 @@ export const GameBoard: React.FC = () => {
         return '';
     };
 
-    const isCourtesyPhase = gameState?.charlestonPhase === 'courtesy';
+    const isCourtesyPhase = gameState.charlestonPhase === 'courtesy';
     const canPass = isCourtesyPhase ? selectedTileIds.length <= 3 : selectedTileIds.length === 3;
 
     return (
