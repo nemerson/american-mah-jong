@@ -119,8 +119,7 @@ export const GameBoard: React.FC = () => {
             : checkMahJong(humanPlayer);
 
         if (win) {
-            setStatusMessage(`🀄 MAH JONG! ${win.section} #${win.handNumber} — ${win.points} points! 🎉`);
-            setGameState({ ...gameState, phase: 'end' });
+            setGameState({ ...gameState, phase: 'end', winner: { playerIndex: 0, ...win } });
         } else {
             if (totalTiles !== 14) {
                 setStatusMessage(`Not a valid hand. You have ${totalTiles} tiles — need exactly 14.`);
@@ -166,8 +165,16 @@ export const GameBoard: React.FC = () => {
         return '';
     };
 
+    const handleNewGame = () => {
+        setGameState(initializeGame(['You', 'Bot 1', 'Bot 2', 'Bot 3']));
+        setSelectedTileIds([]);
+        setStatusMessage(null);
+    };
+
     const isCourtesyPhase = gameState.charlestonPhase === 'courtesy';
     const canPass = isCourtesyPhase ? selectedTileIds.length <= 3 : selectedTileIds.length === 3;
+    const winner = gameState.winner;
+    const winnerPlayer = winner ? gameState.players[winner.playerIndex] : null;
 
     return (
         <div className="game-board">
@@ -228,6 +235,38 @@ export const GameBoard: React.FC = () => {
             {/* Status Message */}
             {statusMessage && (
                 <div className="status-message">{statusMessage}</div>
+            )}
+
+            {/* End of game */}
+            {gameState.phase === 'end' && (
+                <div className="end-overlay" role="dialog" aria-label="Game over">
+                    <div className="end-panel">
+                        <h2 className="end-title">
+                            {winner
+                                ? winner.playerIndex === 0
+                                    ? '🀄 Mah Jong — You win! 🎉'
+                                    : `🀄 ${gameState.players[winner.playerIndex].name} wins`
+                                : 'Wall game — no winner'}
+                        </h2>
+                        {winner && (
+                            <p className="end-detail">
+                                {winner.section} #{winner.handNumber} — {winner.points} points
+                            </p>
+                        )}
+                        {winnerPlayer && (
+                            <div className="end-hand">
+                                {[...winnerPlayer.exposures.flat(), ...winnerPlayer.hand].map(tile => (
+                                    <div key={tile.id} className="exposure-tile-wrapper">
+                                        <MahJongTile tile={tile} />
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        <button className="action-btn primary-btn" onClick={handleNewGame}>
+                            New Game
+                        </button>
+                    </div>
+                </div>
             )}
 
             {/* Bottom Area: Human Player */}

@@ -42,6 +42,14 @@ export interface Player {
     exposures: Tile[][]; // Groups of tiles called from discards
 }
 
+export interface WinInfo {
+    playerIndex: number;
+    section: string;
+    handNumber: number;
+    description: string;
+    points: number;
+}
+
 export interface GameState {
     wall: Tile[];
     discards: Tile[];
@@ -50,4 +58,5 @@ export interface GameState {
     eastPlayerIndex: number;
     phase: 'setup' | 'charleston' | 'draw' | 'discard' | 'call' | 'end';
     charlestonPhase?: 'firstRight' | 'firstAcross' | 'firstLeft' | 'secondLeft' | 'secondAcross' | 'secondRight' | 'courtesy';
+    winner?: WinInfo; // set when the game ends with a mahjong; absent on a wall game
 }
