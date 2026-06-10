@@ -1,7 +1,12 @@
 {
   "permissions": {
     "allow": [
-      "PowerShell(git add -A)"
+      "PowerShell(git add -A)",
+      "PowerShell(Write-Output \"ELECTRON_RUN_AS_NODE = '$env:ELECTRON_RUN_AS_NODE'\")",
+      "PowerShell(Get-Process -Name electron -ErrorAction SilentlyContinue)",
+      "PowerShell(Get-Process -Name node,electron -ErrorAction SilentlyContinue)",
+      "PowerShell(Stop-Process -Force -Confirm:$false)",
+      "PowerShell(Start-Sleep 8; Get-Content \"C:\\\\Users\\\\nicka\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-nicka-Documents-american-mah-jong\\\\5a4a4caf-356a-49df-a163-1d297ba29f81\\\\tasks\\\\b8pkbl1ug.output\"; Write-Output \"---\"; \\(Get-Process -Name electron -ErrorAction SilentlyContinue | Measure-Object\\).Count)"
     ]
   }
 }

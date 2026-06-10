@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react';
 import type { GameState } from '../types/mahjong';
 import { drawTile, discardTile, advanceTurn } from '../engine/game';
-import { decideBotDiscard, decideBotCall } from '../engine/bot';
-import { callDiscard, defaultCallTiles } from '../engine/calls';
+import { decideBotDiscard } from '../engine/bot';
+import { defaultCallTiles, resolveBotClaims } from '../engine/calls';
 import { checkMahJong } from '../engine/rules';
 
 // Drives timed game progression: automatic draws, bot discards, and the
@@ -51,45 +51,29 @@ export function useGameLoop(gameState: GameState, setGameState: (next: GameState
                 }, 1000);
             }
         } else if (state.phase === 'call') {
-            // Bots consider calling partway through the window, in turn order
-            // after the discarder, so the human gets first shot at the tile
+            // If the human can use this discard (exposure or mahjong), they
+            // get a long window with exclusive priority before bots may act.
+            // Otherwise the window is short and bots act quickly.
+            const discard = state.discards[state.discards.length - 1];
+            const human = state.players[0];
+            const humanCanUse = state.currentPlayerIndex !== 0 && discard !== undefined
+                && (defaultCallTiles(human, discard) !== null || checkMahJong(human, discard) !== null);
+
+            const botDelay = humanCanUse ? 6000 : 1500;
+            const windowMs = humanCanUse ? 8000 : 4000;
+
             botCallTimeoutId = setTimeout(() => {
                 const s = stateRef.current;
-                if (s.phase !== 'call' || s.discards.length === 0) return;
-                const discard = s.discards[s.discards.length - 1];
-                for (let offset = 1; offset < s.players.length; offset++) {
-                    const idx = (s.currentPlayerIndex + offset) % s.players.length;
-                    const bot = s.players[idx];
-                    if (!bot.isBot) continue;
+                if (s.phase !== 'call') return;
+                const claimed = resolveBotClaims(s);
+                if (claimed) setGameState(claimed);
+            }, botDelay);
 
-                    // Mahjong on the discard beats any exposure call
-                    const win = checkMahJong(bot, discard);
-                    if (win) {
-                        setGameState({
-                            ...s,
-                            discards: s.discards.slice(0, -1),
-                            players: s.players.map((p, i) => i === idx ? { ...p, hand: [...p.hand, discard] } : p),
-                            phase: 'end',
-                            winner: { playerIndex: idx, ...win },
-                        });
-                        return;
-                    }
-
-                    if (!decideBotCall(bot, discard)) continue;
-                    const tiles = defaultCallTiles(bot, discard);
-                    if (tiles) {
-                        setGameState(callDiscard(s, idx, tiles.map(t => t.id)));
-                        return;
-                    }
-                }
-            }, 2500);
-
-            // Give the player a window to call the discard before play moves on
             timeoutId = setTimeout(() => {
                 const s = stateRef.current;
                 if (s.phase !== 'call') return;
                 setGameState(advanceTurn(s));
-            }, 5000);
+            }, windowMs);
         }
 
         return () => {

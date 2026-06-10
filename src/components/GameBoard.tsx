@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import type { GameState, Tile } from '../types/mahjong';
-import { initializeGame, discardTile, reorderPlayerHand } from '../engine/game';
+import { initializeGame, discardTile, advanceTurn, reorderPlayerHand } from '../engine/game';
 import { executeCharlestonPasses } from '../engine/charleston';
 import type { CharlestonPass } from '../engine/charleston';
 import { decideBotCharlestonPass } from '../engine/bot';
 import { checkMahJong, getTileKey } from '../engine/rules';
-import { callDiscard, defaultCallTiles, exchangeJoker, findExposedJokers } from '../engine/calls';
+import { callDiscard, defaultCallTiles, exchangeJoker, findExposedJokers, resolveBotClaims } from '../engine/calls';
 import { useGameLoop } from '../hooks/useGameLoop';
 import { PlayerHand } from './PlayerHand';
 import { MahJongTile } from './Tile';
@@ -84,6 +84,12 @@ export const GameBoard: React.FC = () => {
         setGameState(callDiscard(gameState, 0, tiles.map(t => t.id)));
         setSelectedTileIds([]);
         setStatusMessage(null);
+    };
+
+    // Decline the discard: bots get their chance, then play moves on
+    const handlePassCall = () => {
+        if (gameState.phase !== 'call') return;
+        setGameState(resolveBotClaims(gameState) ?? advanceTurn(gameState));
     };
 
     // Joker exchange: on the human's turn before discarding, a selected
@@ -293,12 +299,20 @@ export const GameBoard: React.FC = () => {
                                 Discard Selected
                             </button>
                             <button
-                                className="action-btn"
+                                className={`action-btn ${canHumanCall ? 'call-ready' : ''}`}
                                 disabled={!canHumanCall}
                                 onClick={handleCall}
+                                title={gameState.phase === 'call' && !canHumanCall
+                                    ? 'You need two matching tiles in hand (or one plus a joker) to call'
+                                    : undefined}
                             >
                                 Call Discard
                             </button>
+                            {gameState.phase === 'call' && (
+                                <button className="action-btn" onClick={handlePassCall}>
+                                    Pass
+                                </button>
+                            )}
                             {jokerSwapTarget && (
                                 <button
                                     className="action-btn"

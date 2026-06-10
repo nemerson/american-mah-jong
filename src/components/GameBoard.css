@@ -181,6 +181,24 @@
     cursor: not-allowed;
 }
 
+.action-btn.call-ready {
+    border-color: var(--accent-gold);
+    color: var(--accent-gold);
+    animation: pulseGold 1s ease-in-out infinite;
+}
+
+@keyframes pulseGold {
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 rgba(212, 175, 55, 0);
+    }
+
+    50% {
+        box-shadow: 0 0 16px rgba(212, 175, 55, 0.8);
+    }
+}
+
 .action-btn.primary-btn {
     background: var(--accent-blue);
     border-color: #60a5fa;

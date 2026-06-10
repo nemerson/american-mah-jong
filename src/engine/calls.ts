@@ -1,5 +1,6 @@
 import type { GameState, Player, Tile } from '../types/mahjong';
-import { getTileKey } from './rules';
+import { getTileKey, checkMahJong } from './rules';
+import { decideBotCall } from './bot';
 
 // Calling a discard: the claimed tile plus matching tiles from the caller's
 // hand form a face-up exposure (pung/kong/quint). Jokers may stand in for
@@ -76,6 +77,39 @@ export function callDiscard(state: GameState, callerIndex: number, handTileIds: 
         currentPlayerIndex: callerIndex,
         phase: 'discard',
     };
+}
+
+/**
+ * Let the bots claim the latest discard, in turn order after the discarder.
+ * Mahjong on the discard beats an exposure call. Returns the new state if a
+ * bot claimed the tile, or null when no bot wants it.
+ */
+export function resolveBotClaims(state: GameState): GameState | null {
+    if (state.phase !== 'call' || state.discards.length === 0) return null;
+    const discard = state.discards[state.discards.length - 1];
+
+    for (let offset = 1; offset < state.players.length; offset++) {
+        const idx = (state.currentPlayerIndex + offset) % state.players.length;
+        const bot = state.players[idx];
+        if (!bot.isBot) continue;
+
+        const win = checkMahJong(bot, discard);
+        if (win) {
+            return {
+                ...state,
+                discards: state.discards.slice(0, -1),
+                players: state.players.map((p, i) => i === idx ? { ...p, hand: [...p.hand, discard] } : p),
+                phase: 'end',
+                winner: { playerIndex: idx, ...win },
+            };
+        }
+
+        if (decideBotCall(bot, discard)) {
+            const tiles = defaultCallTiles(bot, discard);
+            if (tiles) return callDiscard(state, idx, tiles.map(t => t.id));
+        }
+    }
+    return null;
 }
 
 export interface ExposedJoker {
