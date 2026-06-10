@@ -222,6 +222,70 @@ function allocate(groups: ConcreteGroup[], counts: Map<string, number>, jokers: 
     return solve(0, jokers);
 }
 
+export interface VariantFit {
+    score: number;         // how many of the tiles can serve this variant (0-14)
+    usedTileIds: string[]; // the tiles that contribute
+}
+
+/**
+ * Score how well a partial set of tiles fits a hand variant: the maximum
+ * number of tiles (naturals plus joker credit toward groups of 3+) usable
+ * across all bindings. Greedy per group, so a guide for bot play rather
+ * than an exact completion distance.
+ */
+export function scoreVariantFit(tiles: Tile[], variant: HandVariant): VariantFit {
+    const byKey = new Map<string, Tile[]>();
+    const jokers: Tile[] = [];
+    for (const t of tiles) {
+        if (t.type === 'joker') {
+            jokers.push(t);
+        } else {
+            const key = tileKey(t);
+            const arr = byKey.get(key);
+            if (arr) arr.push(t);
+            else byKey.set(key, [t]);
+        }
+    }
+
+    let best: VariantFit = { score: 0, usedTileIds: [] };
+
+    for (const binding of suitBindings(suitsUsed(variant))) {
+        for (const base of baseCandidates(variant)) {
+            forEachConcretization(variant.groups, binding, base, concrete => {
+                const remaining = new Map<string, number>();
+                for (const [k, arr] of byKey) remaining.set(k, arr.length);
+
+                const takenByKey = new Map<string, number>();
+                let naturalsUsed = 0;
+                let jokerSlots = 0; // unfilled spots in groups of 3+ a joker could take
+
+                for (const g of [...concrete].sort((a, b) => b.size - a.size)) {
+                    const avail = remaining.get(g.key) ?? 0;
+                    const take = Math.min(avail, g.size);
+                    remaining.set(g.key, avail - take);
+                    if (take > 0) takenByKey.set(g.key, (takenByKey.get(g.key) ?? 0) + take);
+                    naturalsUsed += take;
+                    if (g.size >= 3) jokerSlots += g.size - take;
+                }
+
+                const jokerUse = Math.min(jokers.length, jokerSlots);
+                const score = naturalsUsed + jokerUse;
+                if (score > best.score) {
+                    const used: string[] = [];
+                    for (const [k, n] of takenByKey) {
+                        const arr = byKey.get(k)!;
+                        for (let i = 0; i < n; i++) used.push(arr[i].id);
+                    }
+                    for (let i = 0; i < jokerUse; i++) used.push(jokers[i].id);
+                    best = { score, usedTileIds: used };
+                }
+                return false; // explore every concretization for the max
+            });
+        }
+    }
+    return best;
+}
+
 /** Check 14 tiles against a single hand variant. */
 export function matchVariant(tiles: Tile[], variant: HandVariant): boolean {
     const total = variant.groups.reduce((sum, g) => sum + g.size, 0);
