@@ -1,3 +1,93 @@
+/* ============================================================
+   Tile set themes — selected via [data-tiles] on the app shell.
+   Every tile face, edge, ink and back color flows from these.
+   ============================================================ */
+
+:root,
+[data-tiles='ivory'] {
+    --tile-face-flat: #fdfbf4;
+    --tile-face-bg: linear-gradient(155deg, #ffffff 0%, #fdfbf4 45%, #f1ecdd 100%);
+    --tile-face-border: #d8d2bf;
+    --tile-depth-bg: linear-gradient(155deg, #e6e0cd, #c9c2ab);
+    --tile-depth-border: #b3ab92;
+    --tile-ink: #1e293b;
+    --tile-red: #c0392b;
+    --tile-green: #1e7a46;
+    --tile-blue: #1d5fa8;
+    --tile-gold: #b07d1f;
+    --tile-back-bg: linear-gradient(155deg, #2f6f54, #1d4a37);
+    --tile-back-border: #16382a;
+    --tile-back-emblem: rgba(255, 255, 255, 0.18);
+}
+
+[data-tiles='bakelite'] {
+    --tile-face-flat: #e8b84b;
+    --tile-face-bg: linear-gradient(155deg, #f5cf6e 0%, #e8b84b 50%, #d39a2e 100%);
+    --tile-face-border: #b07d22;
+    --tile-depth-bg: linear-gradient(155deg, #c08a26, #96671a);
+    --tile-depth-border: #7a5314;
+    --tile-ink: #3a2a16;
+    --tile-red: #8e2f1c;
+    --tile-green: #2e5d33;
+    --tile-blue: #274d73;
+    --tile-gold: #6e4a0e;
+    --tile-back-bg: linear-gradient(155deg, #7b3b24, #54281a);
+    --tile-back-border: #3d1d12;
+    --tile-back-emblem: rgba(245, 207, 110, 0.3);
+}
+
+[data-tiles='jade'] {
+    --tile-face-flat: #d9e9d5;
+    --tile-face-bg: linear-gradient(155deg, #eaf5e6 0%, #d9e9d5 50%, #bcd6b6 100%);
+    --tile-face-border: #97b791;
+    --tile-depth-bg: linear-gradient(155deg, #a4c49d, #7fa478);
+    --tile-depth-border: #648a5e;
+    --tile-ink: #1c3a2a;
+    --tile-red: #a02c2c;
+    --tile-green: #1f6b3a;
+    --tile-blue: #2c5d80;
+    --tile-gold: #8a6a1a;
+    --tile-back-bg: linear-gradient(155deg, #29543f, #18382a);
+    --tile-back-border: #102a1f;
+    --tile-back-emblem: rgba(234, 245, 230, 0.22);
+}
+
+[data-tiles='onyx'] {
+    --tile-face-flat: #25272e;
+    --tile-face-bg: linear-gradient(155deg, #34373f 0%, #25272e 55%, #17181d 100%);
+    --tile-face-border: #4d505c;
+    --tile-depth-bg: linear-gradient(155deg, #101114, #060608);
+    --tile-depth-border: #3a3d47;
+    --tile-ink: #e7d9ad;
+    --tile-red: #e36956;
+    --tile-green: #5ec98a;
+    --tile-blue: #6fa8e0;
+    --tile-gold: #e0b84e;
+    --tile-back-bg: linear-gradient(155deg, #3b2f10, #221a07);
+    --tile-back-border: #574716;
+    --tile-back-emblem: rgba(224, 184, 78, 0.35);
+}
+
+[data-tiles='rose'] {
+    --tile-face-flat: #f9e6e8;
+    --tile-face-bg: linear-gradient(155deg, #fdf2f3 0%, #f9e6e8 50%, #ecc8cd 100%);
+    --tile-face-border: #d3a3aa;
+    --tile-depth-bg: linear-gradient(155deg, #dfb0b7, #c08d96);
+    --tile-depth-border: #a87680;
+    --tile-ink: #4a2530;
+    --tile-red: #b03a52;
+    --tile-green: #3a7d57;
+    --tile-blue: #4a6da8;
+    --tile-gold: #a8762a;
+    --tile-back-bg: linear-gradient(155deg, #8c4a5a, #5e2f3b);
+    --tile-back-border: #46222c;
+    --tile-back-emblem: rgba(253, 242, 243, 0.25);
+}
+
+/* ============================================================
+   Tile structure
+   ============================================================ */
+
 .mahjong-tile {
     position: relative;
     width: 60px;
@@ -11,10 +101,13 @@
 .tile-face {
     position: absolute;
     inset: 0;
-    background: var(--tile-bg);
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--tile-border);
-    box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.05), var(--shadow-sm);
+    background: var(--tile-face-bg);
+    border-radius: 6px;
+    border: 1px solid var(--tile-face-border);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.45),
+        inset 0 -2px 4px rgba(0, 0, 0, 0.08),
+        var(--shadow-sm);
     z-index: 2;
     display: flex;
     align-items: center;
@@ -23,107 +116,68 @@
     overflow: hidden;
 }
 
-/* 3D Depth Effect */
+/* Onyx tiles shouldn't have an ivory-style top sheen */
+[data-tiles='onyx'] .tile-face {
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.08),
+        inset 0 -2px 4px rgba(0, 0, 0, 0.4),
+        var(--shadow-sm);
+}
+
+.tile-svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+    font-family: 'Outfit', sans-serif;
+}
+
+/* 3D depth — the colored "body" of the tile beneath the face */
 .tile-depth {
     position: absolute;
     top: 4px;
     left: 4px;
     right: -4px;
     bottom: -4px;
-    background: #d1d5db;
-    /* Slate 300 base */
-    border-radius: var(--radius-sm);
-    border: 1px solid #94a3b8;
+    background: var(--tile-depth-bg);
+    border-radius: 6px;
+    border: 1px solid var(--tile-depth-border);
     z-index: 1;
     box-shadow: var(--shadow-md);
 }
 
 .selected .tile-face {
-    border-color: var(--accent-blue);
-    box-shadow: 0 0 10px rgba(59, 130, 246, 0.4), inset 0 0 10px rgba(59, 130, 246, 0.1);
+    border-color: var(--accent-gold);
+    box-shadow:
+        0 0 0 2px var(--accent-gold),
+        0 0 14px rgba(245, 185, 66, 0.55),
+        inset 0 1px 0 rgba(255, 255, 255, 0.45);
 }
 
-.selected .tile-depth {
-    background: #bfdbfe;
-    border-color: #60a5fa;
-}
-
+/* Face-down backs */
 .tile-back {
     width: 100%;
     height: 100%;
-    background: repeating-linear-gradient(45deg,
-            #f8fafc,
-            #f8fafc 10px,
-            #f1f5f9 10px,
-            #f1f5f9 20px);
-}
-
-/* Content Styling inside the tile */
-.tile-content {
+    background: var(--tile-back-bg);
+    border-radius: 5px;
+    border: 1px solid var(--tile-back-border);
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    width: 100%;
-    height: 100%;
-    font-weight: 800;
 }
 
-.tile-value {
-    font-size: 1.25rem;
+.tile-back-emblem {
+    width: 26px;
+    height: 38px;
+    border: 1.5px solid var(--tile-back-emblem);
+    border-radius: 4px;
+    position: relative;
+}
+
+.tile-back-emblem::after {
+    content: '';
     position: absolute;
-    top: 4px;
-    left: 6px;
-}
-
-.tile-icon {
-    font-size: 2rem;
-    margin-top: 10px;
-}
-
-/* Suit Colors */
-.suit-bams {
-    color: var(--accent-green);
-}
-
-.suit-craks {
-    color: var(--accent-red);
-}
-
-.suit-dots {
-    color: var(--accent-blue);
-}
-
-.wind-tile {
-    color: #475569;
-    font-size: 2.25rem;
-}
-
-.dragon-red {
-    color: var(--accent-red);
-    font-size: 2rem;
-}
-
-.dragon-green {
-    color: var(--accent-green);
-    font-size: 2rem;
-}
-
-.dragon-white {
-    color: var(--accent-blue);
-    font-size: 2rem;
-}
-
-.flower-tile {
-    font-size: 2.5rem;
-}
-
-.joker-tile {
-    color: var(--accent-gold);
-    font-size: 0.85rem;
-    writing-mode: vertical-rl;
-    text-orientation: upright;
-    letter-spacing: -3px;
-    height: 100%;
-    margin-top: 5px;
+    inset: 4px;
+    border: 1px solid var(--tile-back-emblem);
+    border-radius: 2px;
+    transform: rotate(45deg) scale(0.7);
 }

@@ -1,35 +1,72 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap');
 
 :root {
-  /* Premium Dark Theme Variables */
-  --bg-dark: #0f172a;       /* Slate 900 */
-  --bg-board: #1e293b;      /* Slate 800 */
-  --bg-surface: #334155;    /* Slate 700 */
-  
-  --text-primary: #f8fafc;  /* Slate 50 */
-  --text-secondary: #94a3b8;/* Slate 400 */
+  --bg-dark: #0f172a;
 
-  /* Tile Colors */
-  --tile-bg: #fdfbf7;       /* Off-white ivory */
-  --tile-shadow: #cbd5e1;
-  --tile-border: #e2e8f0;
+  --text-primary: #f8fafc;
+  --text-secondary: rgba(255, 255, 255, 0.55);
 
   /* Accent Colors */
   --accent-blue: #3b82f6;
-  --accent-red: #ef4444;    /* Craks/Red Dragon */
-  --accent-green: #10b981;  /* Bams/Green Dragon */
-  --accent-gold: #f59e0b;   /* Highlights/Jokers */
+  --accent-red: #ef4444;
+  --accent-green: #10b981;
+  --accent-gold: #d4af37;
 
-  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.3), 0 8px 10px -6px rgb(0 0 0 / 0.3);
-  
-  --shadow-glow: 0 0 15px rgba(59, 130, 246, 0.5);
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.15);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.25), 0 2px 4px -2px rgb(0 0 0 / 0.2);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.3), 0 4px 6px -4px rgb(0 0 0 / 0.25);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.4), 0 8px 10px -6px rgb(0 0 0 / 0.35);
 
   --radius-sm: 4px;
   --radius-md: 8px;
   --radius-lg: 12px;
+}
+
+/* ============================================================
+   Table mats — selected via [data-mat] on the app shell.
+   --mat-center/--mat-edge paint the felt, --rail-a/--rail-b the
+   wooden frame, --mat-trim the inlay line around the playfield.
+   ============================================================ */
+
+.app-shell,
+[data-mat='emerald'] {
+  --mat-center: #2d6a4f;
+  --mat-edge: #173a2b;
+  --rail-a: #8b5e34;
+  --rail-b: #4a2d14;
+  --mat-trim: rgba(212, 175, 55, 0.35);
+}
+
+[data-mat='burgundy'] {
+  --mat-center: #7a2734;
+  --mat-edge: #3c1018;
+  --rail-a: #4a2e1d;
+  --rail-b: #241509;
+  --mat-trim: rgba(222, 184, 135, 0.3);
+}
+
+[data-mat='midnight'] {
+  --mat-center: #1e3a5f;
+  --mat-edge: #0a1830;
+  --rail-a: #3f4756;
+  --rail-b: #161b24;
+  --mat-trim: rgba(148, 180, 220, 0.3);
+}
+
+[data-mat='walnut'] {
+  --mat-center: #6b4226;
+  --mat-edge: #361f0e;
+  --rail-a: #33200f;
+  --rail-b: #170d05;
+  --mat-trim: rgba(232, 196, 138, 0.3);
+}
+
+[data-mat='teal'] {
+  --mat-center: #1f6f6b;
+  --mat-edge: #0c3231;
+  --rail-a: #6b4f33;
+  --rail-b: #362615;
+  --mat-trim: rgba(255, 255, 255, 0.25);
 }
 
 * {
@@ -45,7 +82,8 @@ body {
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  overflow: hidden; /* Prevent scrolling on desktop app */
+  overflow: hidden;
+  /* Prevent scrolling on desktop app */
 }
 
 /* Base App Layout */
@@ -56,6 +94,21 @@ body {
   flex-direction: column;
 }
 
+/* The wooden rail around the playing surface */
+.app-shell {
+  width: 100%;
+  height: 100%;
+  padding: 14px;
+  position: relative;
+  background:
+    repeating-linear-gradient(95deg,
+      rgba(0, 0, 0, 0) 0px,
+      rgba(0, 0, 0, 0.12) 3px,
+      rgba(0, 0, 0, 0) 7px,
+      rgba(255, 255, 255, 0.025) 11px),
+    linear-gradient(160deg, var(--rail-a), var(--rail-b));
+}
+
 /* Utility Classes */
 .flex-center {
   display: flex;
@@ -64,5 +117,5 @@ body {
 }
 
 .title-glow {
-  text-shadow: 0 0 20px rgba(59, 130, 246, 0.6);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
 }

@@ -195,9 +195,10 @@ export const GameBoard: React.FC = () => {
             <div className="middle-section">
                 <div className="opponent-left">
                     <div className="player-label">{gameState.players[3].name}</div>
-                    <div className="vertical-hand">
-                        {/* Simplified vertical representation */}
-                        <div className="tile-placeholder-count">🀄 x{gameState.players[3].hand.length}</div>
+                    <div className="vertical-hand" role="img" aria-label={`${gameState.players[3].hand.length} face-down tiles`}>
+                        {Array.from({ length: gameState.players[3].hand.length }).map((_, i) => (
+                            <div key={i} className="mini-tile-back" />
+                        ))}
                     </div>
                     <ExposureDisplay exposures={gameState.players[3].exposures} />
                 </div>
@@ -231,8 +232,10 @@ export const GameBoard: React.FC = () => {
 
                 <div className="opponent-right">
                     <div className="player-label">{gameState.players[1].name}</div>
-                    <div className="vertical-hand">
-                        <div className="tile-placeholder-count">🀄 x{gameState.players[1].hand.length}</div>
+                    <div className="vertical-hand" role="img" aria-label={`${gameState.players[1].hand.length} face-down tiles`}>
+                        {Array.from({ length: gameState.players[1].hand.length }).map((_, i) => (
+                            <div key={i} className="mini-tile-back" />
+                        ))}
                     </div>
                     <ExposureDisplay exposures={gameState.players[1].exposures} />
                 </div>

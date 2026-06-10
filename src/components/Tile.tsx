@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import type { Tile } from '../types/mahjong';
+import { TileFace } from './TileFace';
 import './Tile.css';
 
 interface TileProps {
@@ -20,36 +21,14 @@ export const MahJongTile: React.FC<TileProps> = ({
 }) => {
 
     const getTileContent = () => {
-        if (isFaceDown) return <div className="tile-back" />;
-
-        switch (tile.type) {
-            case 'suit':
-                return (
-                    <div className={`tile-content suit-${tile.suit}`}>
-                        <span className="tile-value">{tile.value}</span>
-                        <span className="tile-icon">{getSuitIcon(tile.suit)}</span>
-                    </div>
-                );
-            case 'wind':
-                return <div className="tile-content wind-tile">{tile.wind.charAt(0).toUpperCase()}</div>;
-            case 'dragon':
-                return <div className={`tile-content dragon-${tile.dragon}`}>D</div>; // simplified
-            case 'flower':
-                return <div className="tile-content flower-tile">🌸</div>;
-            case 'joker':
-                return <div className="tile-content joker-tile">JOKER</div>;
-            default:
-                return null;
+        if (isFaceDown) {
+            return (
+                <div className="tile-back">
+                    <div className="tile-back-emblem" />
+                </div>
+            );
         }
-    };
-
-    const getSuitIcon = (suit: string) => {
-        switch (suit) {
-            case 'bams': return '🎋';
-            case 'craks': return '🀄'; // simplified
-            case 'dots': return '⚪';
-            default: return '';
-        }
+        return <TileFace tile={tile} />;
     };
 
     const getTileLabel = (): string => {
@@ -70,10 +49,10 @@ export const MahJongTile: React.FC<TileProps> = ({
             role={onClick ? 'button' : 'img'}
             aria-label={getTileLabel()}
             aria-pressed={onClick ? selected : undefined}
-            whileHover={{ y: -5, scale: 1.05 }}
+            whileHover={{ y: selected ? -12 : -5, scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
+            animate={{ opacity: 1, y: selected ? -10 : 0 }}
             transition={{ type: 'spring', stiffness: 300, damping: 20 }}
         >
             <div className="tile-face">

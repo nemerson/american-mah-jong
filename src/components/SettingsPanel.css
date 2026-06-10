@@ -1,0 +1,165 @@
+.settings-toggle {
+    position: fixed;
+    top: 26px;
+    left: 26px;
+    z-index: 150;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: rgba(10, 14, 12, 0.55);
+    color: rgba(255, 255, 255, 0.85);
+    font-family: inherit;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    backdrop-filter: blur(6px);
+    transition: all 0.2s;
+}
+
+.settings-toggle:hover {
+    border-color: var(--accent-gold);
+    color: var(--accent-gold);
+    transform: translateY(-1px);
+}
+
+.settings-panel {
+    position: fixed;
+    top: 70px;
+    left: 26px;
+    z-index: 150;
+    width: 320px;
+    max-height: calc(100vh - 100px);
+    overflow-y: auto;
+    background: linear-gradient(165deg, rgba(24, 28, 26, 0.97), rgba(12, 16, 14, 0.97));
+    border: 1px solid rgba(212, 175, 55, 0.35);
+    border-radius: 14px;
+    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.6);
+    padding: 18px;
+    backdrop-filter: blur(10px);
+}
+
+.settings-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+}
+
+.settings-header h3 {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--accent-gold);
+}
+
+.settings-close {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 0.9rem;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 6px;
+}
+
+.settings-close:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.settings-section {
+    margin-bottom: 16px;
+}
+
+.settings-section-title {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: rgba(255, 255, 255, 0.45);
+    margin-bottom: 8px;
+}
+
+.option-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.option-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 10px 8px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.03);
+    cursor: pointer;
+    font-family: inherit;
+    transition: all 0.15s;
+}
+
+.option-card:hover {
+    border-color: rgba(212, 175, 55, 0.5);
+    background: rgba(255, 255, 255, 0.06);
+    transform: translateY(-1px);
+}
+
+.option-card.option-selected {
+    border-color: var(--accent-gold);
+    background: rgba(212, 175, 55, 0.1);
+    box-shadow: 0 0 0 1px var(--accent-gold), 0 0 12px rgba(212, 175, 55, 0.25);
+}
+
+.mat-swatch {
+    width: 52px;
+    height: 36px;
+    border-radius: 7px;
+    border: 3px solid;
+    box-shadow: inset 0 1px 6px rgba(0, 0, 0, 0.4);
+}
+
+.tile-swatch {
+    position: relative;
+    width: 30px;
+    height: 40px;
+    border-radius: 4px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tile-swatch-glyph {
+    font-size: 1.1rem;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.tile-swatch-num {
+    position: absolute;
+    top: 1px;
+    left: 4px;
+    font-size: 0.55rem;
+    font-weight: 800;
+}
+
+.option-name {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.9);
+    text-align: center;
+}
+
+.option-desc {
+    font-size: 0.58rem;
+    color: rgba(255, 255, 255, 0.45);
+    text-align: center;
+}
