@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import type { GameState, Tile } from '../types/mahjong';
 import { initializeGame, discardTile, advanceTurn, reorderPlayerHand } from '../engine/game';
-import { executeCharlestonPasses } from '../engine/charleston';
+import { executeCharlestonPasses, stopCharleston, BLIND_PASS_PHASES } from '../engine/charleston';
 import type { CharlestonPass } from '../engine/charleston';
 import { decideBotCharlestonPass } from '../engine/bot';
 import { checkMahJong, getTileKey } from '../engine/rules';
@@ -146,10 +146,11 @@ export const GameBoard: React.FC = () => {
     };
 
     const handleCharlestonPass = () => {
+        if (!gameState.charlestonPhase) return;
         const isCourtesy = gameState.charlestonPhase === 'courtesy';
-        const validCount = isCourtesy ? selectedTileIds.length <= 3 : selectedTileIds.length === 3;
-
-        if (!gameState.charlestonPhase || !validCount) return;
+        const isBlind = BLIND_PASS_PHASES.includes(gameState.charlestonPhase);
+        const validCount = isCourtesy || isBlind ? selectedTileIds.length <= 3 : selectedTileIds.length === 3;
+        if (!validCount) return;
 
         const humanTiles = humanPlayer.hand.filter(t => selectedTileIds.includes(t.id));
 
@@ -159,7 +160,8 @@ export const GameBoard: React.FC = () => {
         const bot3Tiles = decideBotCharlestonPass(gameState.players[3], isCourtesy ? Math.floor(Math.random() * 4) : 3);
 
         const passes: CharlestonPass[] = [
-            { fromIndex: 0, toIndex: -1, tiles: humanTiles },
+            // On blind-pass turns any shortfall is taken unseen from the incoming stack
+            { fromIndex: 0, toIndex: -1, tiles: humanTiles, blindCount: isBlind ? 3 - humanTiles.length : 0 },
             { fromIndex: 1, toIndex: -1, tiles: bot1Tiles },
             { fromIndex: 2, toIndex: -1, tiles: bot2Tiles },
             { fromIndex: 3, toIndex: -1, tiles: bot3Tiles }
@@ -168,6 +170,14 @@ export const GameBoard: React.FC = () => {
         const newState = executeCharlestonPasses(gameState, gameState.charlestonPhase, passes);
         setGameState(newState);
         setSelectedTileIds([]); // Clear selection after pass
+        resumeClock();
+    };
+
+    const handleStopCharleston = () => {
+        setGameState(stopCharleston(gameState));
+        setSelectedTileIds([]);
+        setStatusMessage('Charleston stopped — courtesy pass next.');
+        setTimeout(() => setStatusMessage(null), 3000);
         resumeClock();
     };
 
@@ -189,7 +199,12 @@ export const GameBoard: React.FC = () => {
     };
 
     const isCourtesyPhase = gameState.charlestonPhase === 'courtesy';
-    const canPass = isCourtesyPhase ? selectedTileIds.length <= 3 : selectedTileIds.length === 3;
+    const isBlindPhase = gameState.charlestonPhase !== undefined
+        && BLIND_PASS_PHASES.includes(gameState.charlestonPhase);
+    const canPass = isCourtesyPhase || isBlindPhase
+        ? selectedTileIds.length <= 3
+        : selectedTileIds.length === 3;
+    const blindCount = 3 - selectedTileIds.length;
     const winner = gameState.winner;
     const winnerPlayer = winner ? gameState.players[winner.playerIndex] : null;
 
@@ -301,13 +316,29 @@ export const GameBoard: React.FC = () => {
                 <div className="tile-count">Your tiles: {humanPlayer.hand.length}</div>
                 <div className="player-actions">
                     {gameState.phase === 'charleston' ? (
-                        <button
-                            className="action-btn primary-btn"
-                            disabled={!canPass}
-                            onClick={handleCharlestonPass}
-                        >
-                            Pass {isCourtesyPhase ? '0-3' : '3'} Tiles {getPassDirectionText()} ({selectedTileIds.length}/{isCourtesyPhase ? '3' : '3'})
-                        </button>
+                        <>
+                            <button
+                                className="action-btn primary-btn"
+                                disabled={!canPass}
+                                onClick={handleCharlestonPass}
+                                title={isBlindPhase
+                                    ? 'Select fewer than 3 tiles to pass blind: the rest are taken unseen from the tiles coming to you'
+                                    : undefined}
+                            >
+                                {isBlindPhase && selectedTileIds.length < 3
+                                    ? `Blind Pass ${getPassDirectionText()} (${selectedTileIds.length} + ${blindCount} unseen)`
+                                    : `Pass ${isCourtesyPhase ? '0-3' : '3'} Tiles ${getPassDirectionText()} (${selectedTileIds.length}/3)`}
+                            </button>
+                            {gameState.charlestonPhase === 'secondLeft' && (
+                                <button
+                                    className="action-btn"
+                                    onClick={handleStopCharleston}
+                                    title="Skip the optional second Charleston and go straight to the courtesy pass"
+                                >
+                                    Stop Charleston
+                                </button>
+                            )}
+                        </>
                     ) : (
                         <>
                             <button

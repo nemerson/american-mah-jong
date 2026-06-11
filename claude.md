@@ -70,6 +70,11 @@ parity; `soap` is the white dragon used as zero; dragons map to suits
 
 - Jokers: only in groups of 3+ (never singles/pairs), each group needs ≥1 natural
   tile, jokers can't be claimed from discards or passed in the Charleston.
+- Charleston: the second Charleston is optional — the human can stop it at the
+  decision point (entry to secondLeft) via `stopCharleston`. On the 3rd and 6th
+  passes a blind pass is allowed: pick 0-3 of your own tiles, the rest are taken
+  unseen from the incoming stack (they pass through without entering your hand).
+  Bots always pass 3 of their own and never blind-pass or stop the Charleston.
 - Calling: discard + 2 matching naturals minimum (or 1 natural + 1 joker); the call
   window gives the human exclusive priority (bots wait 6s of an 8s window) when they
   can use the tile, otherwise a quick 4s window with bots acting at 1.5s.
