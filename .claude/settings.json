@@ -8,7 +8,8 @@
       "PowerShell(Stop-Process -Force -Confirm:$false)",
       "PowerShell(Start-Sleep 8; Get-Content \"C:\\\\Users\\\\nicka\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-nicka-Documents-american-mah-jong\\\\5a4a4caf-356a-49df-a163-1d297ba29f81\\\\tasks\\\\b8pkbl1ug.output\"; Write-Output \"---\"; \\(Get-Process -Name electron -ErrorAction SilentlyContinue | Measure-Object\\).Count)",
       "PowerShell(git ls-remote origin master)",
-      "PowerShell(Get-Content \"$env:APPDATA\\\\Code\\\\User\\\\settings.json\" -ErrorAction SilentlyContinue | Select-String -Pattern 'git\\\\.')"
+      "PowerShell(Get-Content \"$env:APPDATA\\\\Code\\\\User\\\\settings.json\" -ErrorAction SilentlyContinue | Select-String -Pattern 'git\\\\.')",
+      "PowerShell(git fetch origin)"
     ]
   }
 }
