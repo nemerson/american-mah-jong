@@ -5,4 +5,9 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   base: './',
+  server: {
+    // Honor an assigned port (e.g. from the preview harness); default to 5173
+    // so `npm run dev` and the Electron loader keep working unchanged.
+    port: Number(process.env.PORT) || 5173,
+  },
 })
