@@ -219,21 +219,8 @@ export const GameBoard: React.FC = () => {
                         Phase: {gameState.phase.toUpperCase()}
                         {gameState.charlestonPhase && ` (${gameState.charlestonPhase})`}
                     </div>
-                    <div className="center-status-row">
-                        <div className="wall-counter">
-                            Tiles remaining: {gameState.wall.length}
-                        </div>
-                        {gameState.phase !== 'end' && (
-                            <button
-                                className={`pause-btn ${isPaused ? 'is-paused' : ''}`}
-                                onClick={() => setIsPaused(p => !p)}
-                                aria-pressed={isPaused}
-                                aria-label={isPaused ? 'Resume game' : 'Pause game'}
-                                title={isPaused ? 'Resume the game clock' : 'Pause the game to study the table'}
-                            >
-                                {isPaused ? '▶ Resume' : '⏸ Pause'}
-                            </button>
-                        )}
+                    <div className="wall-counter">
+                        Tiles remaining: {gameState.wall.length}
                     </div>
                     {isPaused && (
                         <div className="paused-banner" role="status">
@@ -360,6 +347,17 @@ export const GameBoard: React.FC = () => {
                                 MAH JONG!
                             </button>
                         </>
+                    )}
+                    {gameState.phase !== 'end' && (
+                        <button
+                            className={`action-btn pause-btn ${isPaused ? 'is-paused' : ''}`}
+                            onClick={() => setIsPaused(p => !p)}
+                            aria-pressed={isPaused}
+                            aria-label={isPaused ? 'Resume game' : 'Pause game'}
+                            title={isPaused ? 'Resume the game clock' : 'Pause the game to study the table'}
+                        >
+                            {isPaused ? '▶ Resume' : '⏸ Pause'}
+                        </button>
                     )}
                 </div>
                 <PlayerHand
