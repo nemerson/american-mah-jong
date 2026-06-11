@@ -9,7 +9,11 @@
       "PowerShell(Start-Sleep 8; Get-Content \"C:\\\\Users\\\\nicka\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-nicka-Documents-american-mah-jong\\\\5a4a4caf-356a-49df-a163-1d297ba29f81\\\\tasks\\\\b8pkbl1ug.output\"; Write-Output \"---\"; \\(Get-Process -Name electron -ErrorAction SilentlyContinue | Measure-Object\\).Count)",
       "PowerShell(git ls-remote origin master)",
       "PowerShell(Get-Content \"$env:APPDATA\\\\Code\\\\User\\\\settings.json\" -ErrorAction SilentlyContinue | Select-String -Pattern 'git\\\\.')",
-      "PowerShell(git fetch origin)"
+      "PowerShell(git fetch origin)",
+      "PowerShell(Write-Output \"Documents: $\\(Test-Path 'C:\\\\Users\\\\nicka\\\\Documents\\\\american-mah-jong'\\)\"; Write-Output \"Projects: $\\(Test-Path 'C:\\\\Users\\\\nicka\\\\Projects\\\\american-mah-jong'\\)\"; if \\(Test-Path 'C:\\\\Users\\\\nicka\\\\Projects\\\\american-mah-jong'\\) { \\(Get-ChildItem 'C:\\\\Users\\\\nicka\\\\Projects\\\\american-mah-jong' | Measure-Object\\).Count }; if \\(Test-Path 'C:\\\\Users\\\\nicka\\\\Documents\\\\american-mah-jong'\\) { \\(Get-ChildItem 'C:\\\\Users\\\\nicka\\\\Documents\\\\american-mah-jong' -Force | Measure-Object\\).Count })",
+      "Bash(cd /c/Users/nicka && pwd)",
+      "Read(//c/Users/nicka/**)",
+      "PowerShell(Set-Location C:\\\\Users\\\\nicka; try { Move-Item \"C:\\\\Users\\\\nicka\\\\Documents\\\\american-mah-jong\" \"C:\\\\Users\\\\nicka\\\\Projects\\\\american-mah-jong\" -ErrorAction Stop; Write-Output \"MOVE SUCCEEDED\" } catch { Write-Output \"MOVE FAILED: $\\($_.Exception.Message\\)\" })"
     ]
   }
 }
