@@ -34,8 +34,9 @@ export const GameBoard: React.FC = () => {
         initializeGame(['You', 'Bot 1', 'Bot 2', 'Bot 3']));
     const [selectedTileIds, setSelectedTileIds] = useState<string[]>([]);
     const [statusMessage, setStatusMessage] = useState<string | null>(null);
+    const [isPaused, setIsPaused] = useState(false);
 
-    useGameLoop(gameState, setGameState);
+    useGameLoop(gameState, setGameState, isPaused);
 
     const handleReorder = (newHand: Tile[]) => {
         setGameState(reorderPlayerHand(gameState, gameState.players[0].id, newHand));
@@ -60,10 +61,15 @@ export const GameBoard: React.FC = () => {
         }
     };
 
+    // Any action that advances the game also resumes a paused clock —
+    // otherwise play would silently stay frozen after the player moves on.
+    const resumeClock = () => setIsPaused(false);
+
     const handleDiscard = () => {
         if (selectedTileIds.length !== 1 || gameState.phase !== 'discard' || gameState.currentPlayerIndex !== 0) return;
         setGameState(discardTile(gameState, 0, selectedTileIds[0]));
         setSelectedTileIds([]);
+        resumeClock();
     };
 
     const latestDiscard = gameState.discards.length > 0
@@ -84,12 +90,14 @@ export const GameBoard: React.FC = () => {
         setGameState(callDiscard(gameState, 0, tiles.map(t => t.id)));
         setSelectedTileIds([]);
         setStatusMessage(null);
+        resumeClock();
     };
 
     // Decline the discard: bots get their chance, then play moves on
     const handlePassCall = () => {
         if (gameState.phase !== 'call') return;
         setGameState(resolveBotClaims(gameState) ?? advanceTurn(gameState));
+        resumeClock();
     };
 
     // Joker exchange: on the human's turn before discarding, a selected
@@ -110,6 +118,7 @@ export const GameBoard: React.FC = () => {
         setSelectedTileIds([]);
         setStatusMessage('Swapped your tile for an exposed joker!');
         setTimeout(() => setStatusMessage(null), 3000);
+        resumeClock();
     };
 
     const handleCallMahJong = () => {
@@ -159,6 +168,7 @@ export const GameBoard: React.FC = () => {
         const newState = executeCharlestonPasses(gameState, gameState.charlestonPhase, passes);
         setGameState(newState);
         setSelectedTileIds([]); // Clear selection after pass
+        resumeClock();
     };
 
     const getPassDirectionText = () => {
@@ -175,6 +185,7 @@ export const GameBoard: React.FC = () => {
         setGameState(initializeGame(['You', 'Bot 1', 'Bot 2', 'Bot 3']));
         setSelectedTileIds([]);
         setStatusMessage(null);
+        resumeClock();
     };
 
     const isCourtesyPhase = gameState.charlestonPhase === 'courtesy';
@@ -208,9 +219,27 @@ export const GameBoard: React.FC = () => {
                         Phase: {gameState.phase.toUpperCase()}
                         {gameState.charlestonPhase && ` (${gameState.charlestonPhase})`}
                     </div>
-                    <div className="wall-counter">
-                        Tiles remaining: {gameState.wall.length}
+                    <div className="center-status-row">
+                        <div className="wall-counter">
+                            Tiles remaining: {gameState.wall.length}
+                        </div>
+                        {gameState.phase !== 'end' && (
+                            <button
+                                className={`pause-btn ${isPaused ? 'is-paused' : ''}`}
+                                onClick={() => setIsPaused(p => !p)}
+                                aria-pressed={isPaused}
+                                aria-label={isPaused ? 'Resume game' : 'Pause game'}
+                                title={isPaused ? 'Resume the game clock' : 'Pause the game to study the table'}
+                            >
+                                {isPaused ? '▶ Resume' : '⏸ Pause'}
+                            </button>
+                        )}
                     </div>
+                    {isPaused && (
+                        <div className="paused-banner" role="status">
+                            Game paused — take your time, nothing will advance
+                        </div>
+                    )}
 
                     <div className="discard-pile">
                         {gameState.discards.length === 0 ? (

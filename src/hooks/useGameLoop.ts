@@ -10,7 +10,11 @@ import { checkMahJong } from '../engine/rules';
 // progress (phase, turn, wall, discards) rather than the whole state object,
 // so cosmetic updates like hand reordering neither reset nor cancel a
 // pending timer.
-export function useGameLoop(gameState: GameState, setGameState: (next: GameState) => void) {
+//
+// While `paused` is true nothing is scheduled, freezing the game wherever it
+// stands; pending timers are cleared by the effect cleanup. Resuming restarts
+// the current phase's window from the beginning.
+export function useGameLoop(gameState: GameState, setGameState: (next: GameState) => void, paused = false) {
     const stateRef = useRef(gameState);
     useEffect(() => {
         stateRef.current = gameState;
@@ -21,6 +25,8 @@ export function useGameLoop(gameState: GameState, setGameState: (next: GameState
     const discardCount = gameState.discards.length;
 
     useEffect(() => {
+        if (paused) return;
+
         const state = stateRef.current;
         let timeoutId: ReturnType<typeof setTimeout> | undefined;
         let botCallTimeoutId: ReturnType<typeof setTimeout> | undefined;
@@ -80,5 +86,5 @@ export function useGameLoop(gameState: GameState, setGameState: (next: GameState
             clearTimeout(timeoutId);
             clearTimeout(botCallTimeoutId);
         };
-    }, [phase, currentPlayerIndex, wallCount, discardCount, setGameState]);
+    }, [phase, currentPlayerIndex, wallCount, discardCount, paused, setGameState]);
 }

@@ -114,6 +114,60 @@
     box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4);
 }
 
+.center-status-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.pause-btn {
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    color: rgba(255, 255, 255, 0.8);
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-family: inherit;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.pause-btn:hover {
+    border-color: var(--accent-gold);
+    color: var(--accent-gold);
+}
+
+.pause-btn.is-paused {
+    background: linear-gradient(180deg, #e8c764, #c49a2e);
+    border-color: #f0d98a;
+    color: #2b1f06;
+}
+
+.paused-banner {
+    background: rgba(0, 0, 0, 0.45);
+    border: 1px solid var(--accent-gold);
+    color: var(--accent-gold);
+    padding: 6px 18px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    animation: bannerFadeIn 0.25s ease;
+}
+
+@keyframes bannerFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 /* The discard area reads as a stitched inset in the felt */
 .discard-pile {
     min-width: 240px;
