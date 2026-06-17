@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import type { Player, Tile } from '../types/mahjong';
 import type { GameTransport, PlayerView, PlayerSeatView } from '../net/types';
-import { createTransport } from '../net/createTransport';
+import { createLocalTransport } from '../net/createTransport';
 import { checkMahJong, getTileKey } from '../engine/rules';
 import { defaultCallTiles, exposureKey } from '../engine/calls';
 import { BLIND_PASS_PHASES } from '../engine/charleston';
@@ -70,9 +70,19 @@ function findExposedJokersInView(view: PlayerView): ExposedJoker[] {
     return found;
 }
 
-export const GameBoard: React.FC = () => {
-    // One stable transport for this board's lifetime (lazy init runs once).
-    const [transport] = useState<GameTransport>(createTransport);
+interface GameBoardProps {
+    /**
+     * The authority the board talks to. Omitted in single-player / Electron,
+     * where the board spins up its own in-process LocalTransport. In
+     * multiplayer the App passes the RemoteConnection's transport.
+     */
+    transport?: GameTransport;
+}
+
+export const GameBoard: React.FC<GameBoardProps> = ({ transport: injected }) => {
+    // One stable transport for this board's lifetime (lazy init runs once). A
+    // provided transport (multiplayer) is reused; otherwise we run locally.
+    const [transport] = useState<GameTransport>(() => injected ?? createLocalTransport());
 
     const [view, setView] = useState<PlayerView | null>(null);
     const [selectedTileIds, setSelectedTileIds] = useState<string[]>([]);

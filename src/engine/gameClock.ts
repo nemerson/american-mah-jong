@@ -1,13 +1,13 @@
 import type { GameState } from '../types/mahjong';
 import { drawTile, discardTile, advanceTurn } from './game';
 import { decideBotDiscard } from './bot';
-import { defaultCallTiles, resolveBotClaims } from './calls';
+import { resolveBotClaims } from './calls';
 import { checkMahJong } from './rules';
 
 // The game clock: timed, authority-side progression — automatic draws, bot
-// discards, and the call-window countdown. Extracted verbatim from the old
-// useGameLoop hook so it can run wherever the authoritative state lives (the
-// browser for single-player via LocalTransport, the server for multiplayer).
+// discards, and the call-window countdown. Extracted from the old useGameLoop
+// hook so it can run wherever the authoritative state lives (the browser for
+// single-player via LocalTransport, the server for multiplayer).
 //
 // It is transport-agnostic: it reads the canonical state through `getState`
 // and pushes transitions through `setState`. After every state change the
@@ -16,13 +16,27 @@ import { checkMahJong } from './rules';
 // cosmetic update such as hand reordering neither resets nor cancels a pending
 // timer.
 //
-// NOTE: the call window still grants seat 0 (the lone human in single-player)
-// exclusive priority. Phase 2 replaces this block with real multi-seat claim
-// arbitration.
+// The call window is owned by the authority (GameSession), which collects
+// claims from every seat and resolves them. The clock just runs the countdown
+// and asks the authority to resolve when it elapses. When no authority hook is
+// supplied (the engine's own clock tests), it falls back to the legacy
+// seat-order bot-claim resolution so those paths keep working.
 
 export interface GameClockDeps {
     getState: () => GameState;
     setState: (next: GameState) => void;
+    /**
+     * How long the call window lasts (ms) for the current state. The authority
+     * sizes this (e.g. shorter when only bots can act). Defaults to a fixed
+     * window when omitted.
+     */
+    getCallWindowMs?: () => number;
+    /**
+     * Resolve the call window now: the authority applies the winning claim (or
+     * advances the turn if nobody claimed). When omitted, the clock falls back
+     * to legacy bot-claim resolution + advanceTurn.
+     */
+    resolveCallWindow?: () => void;
 }
 
 export interface GameClock {
@@ -37,17 +51,19 @@ export interface GameClock {
 const progressKey = (s: GameState) =>
     `${s.phase}|${s.currentPlayerIndex}|${s.wall.length}|${s.discards.length}`;
 
-export function createGameClock({ getState, setState }: GameClockDeps): GameClock {
+// Legacy fallback window when the authority doesn't size it: long enough for a
+// lone human to react, matching the old single-player feel.
+const DEFAULT_CALL_WINDOW_MS = 4000;
+
+export function createGameClock(deps: GameClockDeps): GameClock {
+    const { getState, setState, getCallWindowMs, resolveCallWindow } = deps;
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
-    let botCallTimeoutId: ReturnType<typeof setTimeout> | undefined;
     let stopped = true;
     let lastKey = '';
 
     const clear = () => {
         clearTimeout(timeoutId);
-        clearTimeout(botCallTimeoutId);
         timeoutId = undefined;
-        botCallTimeoutId = undefined;
     };
 
     const schedule = () => {
@@ -81,28 +97,18 @@ export function createGameClock({ getState, setState }: GameClockDeps): GameCloc
                 }, 1000);
             }
         } else if (state.phase === 'call') {
-            // If the human can use this discard (exposure or mahjong), they get
-            // a long window with exclusive priority before bots may act.
-            // Otherwise the window is short and bots act quickly.
-            const discard = state.discards[state.discards.length - 1];
-            const human = state.players[0];
-            const humanCanUse = state.currentPlayerIndex !== 0 && discard !== undefined
-                && (defaultCallTiles(human, discard) !== null || checkMahJong(human, discard) !== null);
-
-            const botDelay = humanCanUse ? 6000 : 1500;
-            const windowMs = humanCanUse ? 8000 : 4000;
-
-            botCallTimeoutId = setTimeout(() => {
-                const s = getState();
-                if (s.phase !== 'call') return;
-                const claimed = resolveBotClaims(s);
-                if (claimed) setState(claimed);
-            }, botDelay);
-
+            // The authority owns claim collection; the clock just runs the
+            // window and asks it to resolve when the countdown elapses.
+            const windowMs = getCallWindowMs ? getCallWindowMs() : DEFAULT_CALL_WINDOW_MS;
             timeoutId = setTimeout(() => {
                 const s = getState();
                 if (s.phase !== 'call') return;
-                setState(advanceTurn(s));
+                if (resolveCallWindow) {
+                    resolveCallWindow();
+                } else {
+                    // Legacy fallback for the engine's standalone clock tests.
+                    setState(resolveBotClaims(s) ?? advanceTurn(s));
+                }
             }, windowMs);
         }
     };

@@ -52,6 +52,51 @@ export type Intent =
     | { type: 'callMahJong' }
     | { type: 'newGame' };
 
+// ---- Lobby (multiplayer pre-game) -----------------------------------------
+
+/** One seat as shown in the waiting room: empty, a human, or a bot. */
+export interface LobbySeat {
+    index: number;
+    name: string;
+    occupant: 'empty' | 'human' | 'bot';
+    isYou: boolean;
+    isEast: boolean;
+}
+
+/** Waiting-room snapshot the server pushes to everyone in a room. */
+export interface LobbyState {
+    code: string;
+    mySeat: number;
+    seats: LobbySeat[];
+    started: boolean;
+}
+
+/**
+ * Requests a client sends while in the lobby. `create` mints a room; `join`
+ * enters one by code; `addBot`/`removeSeat` shape the table; `setEast` picks
+ * the dealer; `start` begins the game. The server validates each (room exists,
+ * seat free, table full enough) and ignores anything illegal.
+ */
+export type LobbyRequest =
+    | { type: 'create'; name?: string }
+    | { type: 'join'; code: string; name?: string }
+    | { type: 'addBot'; seat: number }
+    | { type: 'removeSeat'; seat: number }
+    | { type: 'setEast'; seat: number }
+    | { type: 'start' };
+
+/**
+ * Why a `start` request did or did not begin the game. The discriminated
+ * `reason` lets the server map each failure to a distinct, accurate message
+ * (or stay silent), instead of overloading one "fill every seat" error:
+ * - `seats`   — at least one seat is still empty.
+ * - `east`    — the chosen East seat is empty (shouldn't happen via the UI).
+ * - `already` — the game has already started (e.g. a double-click); silent.
+ */
+export type StartResult =
+    | { ok: true }
+    | { ok: false; reason: 'seats' | 'east' | 'already' };
+
 /**
  * The UI depends only on this interface. `subscribe` immediately delivers the
  * current view and then every subsequent one; it returns an unsubscribe fn.

@@ -112,6 +112,97 @@ export function resolveBotClaims(state: GameState): GameState | null {
     return null;
 }
 
+/**
+ * A single seat's response to a discard during the call window. `pass` means
+ * the seat declines; `exposure` claims the discard into a face-up group using
+ * the given hand tiles; `mahjong` claims the discard to complete the hand.
+ */
+export type Claim =
+    | { seat: number; kind: 'pass' }
+    | { seat: number; kind: 'exposure'; handTileIds: string[] }
+    | { seat: number; kind: 'mahjong' };
+
+/**
+ * Unified claim arbitration: given every seat's response to the latest
+ * discard, pick the winner and apply it. Replaces the old seat-order +
+ * UI-timing approach (`resolveBotClaims`) with a single rule that works for
+ * any mix of humans and bots:
+ *
+ *   1. Any mahjong claim beats any exposure claim.
+ *   2. Within the same kind, the claim closest to the discarder in turn order
+ *      (the next seat to play) wins.
+ *
+ * Returns the resulting state, or null when no seat claimed the tile (the
+ * caller then advances the turn). The discarder's own claim is ignored — you
+ * can never claim your own tile.
+ */
+export function resolveClaims(state: GameState, claims: Claim[]): GameState | null {
+    if (state.phase !== 'call' || state.discards.length === 0) return null;
+    const discard = state.discards[state.discards.length - 1];
+
+    // Proximity to the discarder: the seat that would play next is closest.
+    const distance = (seat: number) =>
+        (seat - state.currentPlayerIndex + state.players.length) % state.players.length;
+
+    const eligible = claims.filter(c => c.kind !== 'pass' && c.seat !== state.currentPlayerIndex);
+
+    const mahjongs = eligible
+        .filter((c): c is Extract<Claim, { kind: 'mahjong' }> => c.kind === 'mahjong')
+        .filter(c => checkMahJong(state.players[c.seat], discard) !== null)
+        .sort((a, b) => distance(a.seat) - distance(b.seat));
+
+    if (mahjongs.length > 0) {
+        const winner = mahjongs[0];
+        const win = checkMahJong(state.players[winner.seat], discard)!;
+        return {
+            ...state,
+            discards: state.discards.slice(0, -1),
+            players: state.players.map((p, i) =>
+                i === winner.seat ? { ...p, hand: [...p.hand, discard] } : p),
+            phase: 'end',
+            winner: { playerIndex: winner.seat, ...win },
+        };
+    }
+
+    const exposures = eligible
+        .filter((c): c is Extract<Claim, { kind: 'exposure' }> => c.kind === 'exposure')
+        .filter(c => {
+            const handTiles = c.handTileIds
+                .map(id => state.players[c.seat].hand.find(t => t.id === id))
+                .filter((t): t is Tile => t !== undefined);
+            return handTiles.length === c.handTileIds.length && isValidExposure(discard, handTiles);
+        })
+        .sort((a, b) => distance(a.seat) - distance(b.seat));
+
+    if (exposures.length > 0) {
+        const winner = exposures[0];
+        return callDiscard(state, winner.seat, winner.handTileIds);
+    }
+
+    return null;
+}
+
+/**
+ * What a bot at `seat` would claim for the latest discard: a mahjong if the
+ * discard completes its hand, otherwise an exposure if calling advances its
+ * target, otherwise a pass. Used to fold bots into the unified claim window.
+ */
+export function decideBotClaim(state: GameState, seat: number): Claim {
+    if (state.phase !== 'call' || state.discards.length === 0) return { seat, kind: 'pass' };
+    if (seat === state.currentPlayerIndex) return { seat, kind: 'pass' };
+
+    const bot = state.players[seat];
+    const discard = state.discards[state.discards.length - 1];
+
+    if (checkMahJong(bot, discard)) return { seat, kind: 'mahjong' };
+
+    if (decideBotCall(bot, discard)) {
+        const tiles = defaultCallTiles(bot, discard);
+        if (tiles) return { seat, kind: 'exposure', handTileIds: tiles.map(t => t.id) };
+    }
+    return { seat, kind: 'pass' };
+}
+
 export interface ExposedJoker {
     ownerIndex: number;
     exposureIndex: number;

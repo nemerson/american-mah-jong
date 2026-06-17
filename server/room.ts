@@ -1,39 +1,194 @@
-import type { Server, Socket } from 'socket.io';
-import type { Intent } from '../src/net/types';
+import type { Socket } from 'socket.io';
+import type { Intent, LobbySeat, LobbyState, StartResult } from '../src/net/types';
 import { GameSession } from '../src/net/gameSession';
 import { viewFor } from '../src/net/viewFor';
 
-// Phase 1: a single room with one human seat (0) and three bots. Every
-// connection controls and views seat 0, which is enough to prove the
-// authoritative loop over the network. Phase 2 turns this into a room registry
-// with real per-connection seat assignment and per-seat views.
+// One table. Before the game starts it is a waiting room with four seats, each
+// empty, held by a connected human, or filled by a bot. "start" freezes the
+// seating into a GameSession (the same authoritative core single-player uses)
+// and from then on every connected human is broadcast only their own seat's
+// view — the hidden-information boundary that protects multiple humans.
 
-const HUMAN_SEAT = 0;
+const SEATS = 4;
+
+interface Seat {
+    socket?: Socket;   // a connected human controls this seat
+    bot: boolean;      // filled by a bot
+    name: string;
+}
 
 export class GameRoom {
-    private session = new GameSession();
+    readonly code: string;
+    private seats: Seat[] = Array.from({ length: SEATS }, (_, i) => ({ bot: false, name: `Seat ${i + 1}` }));
+    private eastIndex = 0;
+    private session?: GameSession;
+    private unsubscribe?: () => void;
 
-    constructor(private io: Server) {
-        this.session.onChange(() => this.broadcast());
+    constructor(code: string, private onEmpty: (code: string) => void) {
+        this.code = code;
     }
 
-    handleConnection(socket: Socket): void {
-        socket.data.seat = HUMAN_SEAT;
-        // Send the joining client the current view immediately.
-        socket.emit('view', viewFor(this.session.getState(), HUMAN_SEAT));
-
-        socket.on('intent', (intent: Intent) => {
-            try {
-                this.session.applyIntent(socket.data.seat, intent);
-            } catch {
-                // Reject forged/illegal intents silently, like the local path.
-            }
-        });
+    get started(): boolean {
+        return this.session !== undefined;
     }
 
-    private broadcast(): void {
-        // Phase 1: one shared seat, so one view fans out to everyone. Phase 2
-        // emits a distinct viewFor(state, seat) to each connection.
-        this.io.emit('view', viewFor(this.session.getState(), HUMAN_SEAT));
+    /** Whether the room has no connected humans (eligible for cleanup). */
+    get isEmpty(): boolean {
+        return this.seats.every(s => s.socket === undefined);
+    }
+
+    /** Seat a newly connected human in the first free seat. Returns it, or -1. */
+    seatHuman(socket: Socket, name?: string): number {
+        if (this.started) return -1;
+        const seat = this.seats.findIndex(s => !s.socket && !s.bot);
+        if (seat === -1) return -1;
+        this.seats[seat] = { socket, bot: false, name: name?.trim() || `Player ${seat + 1}` };
+        return seat;
+    }
+
+    addBot(seat: number): void {
+        if (this.started) return;
+        if (seat < 0 || seat >= SEATS) return;
+        if (this.seats[seat].socket || this.seats[seat].bot) return;
+        this.seats[seat] = { bot: true, name: `Bot ${seat + 1}` };
+    }
+
+    /** Clear a seat (a bot is removed; a human seat is only cleared on leave). */
+    removeSeat(seat: number, by: Socket): void {
+        if (this.started) return;
+        if (seat < 0 || seat >= SEATS) return;
+        const target = this.seats[seat];
+        // Only let a human remove a bot, or vacate their own seat.
+        if (target.socket && target.socket !== by) return;
+        this.seats[seat] = { bot: false, name: `Seat ${seat + 1}` };
+        this.ensureEastOccupied();
+    }
+
+    setEast(seat: number): void {
+        if (this.started) return;
+        if (seat < 0 || seat >= SEATS) return;
+        if (!this.seats[seat].socket && !this.seats[seat].bot) return;
+        this.eastIndex = seat;
+    }
+
+    /**
+     * Keep the invariant "eastIndex always references an occupied seat". Called
+     * after clearing a seat: if East was just emptied, move it to the first
+     * still-occupied seat (none occupied leaves it as-is; start() will reject).
+     */
+    private ensureEastOccupied(): void {
+        const east = this.seats[this.eastIndex];
+        if (east.socket || east.bot) return;
+        const next = this.seats.findIndex(s => s.socket || s.bot);
+        if (next !== -1) this.eastIndex = next;
+    }
+
+    /**
+     * Begin the game once every seat is filled (by a human or a bot). Returns a
+     * discriminated result so the caller can report exactly why a start was
+     * refused (an empty seat vs. an empty East vs. an already-running game)
+     * instead of one overloaded message.
+     */
+    start(): StartResult {
+        if (this.started) return { ok: false, reason: 'already' };
+        if (!this.seats.every(s => s.socket || s.bot)) return { ok: false, reason: 'seats' };
+        // East must be an occupied seat.
+        if (!this.seats[this.eastIndex].socket && !this.seats[this.eastIndex].bot) {
+            return { ok: false, reason: 'east' };
+        }
+
+        const names = this.seats.map(s => s.name);
+        const isBot = this.seats.map(s => s.bot);
+        this.session = new GameSession({ names, init: { eastIndex: this.eastIndex, isBot } });
+        this.unsubscribe = this.session.onChange(() => this.broadcastGame());
+        // Tell every seated human the game has started so their lobby UI hands
+        // off to the board. The board then subscribes and RemoteTransport
+        // replays the latest `view` it captured below.
+        this.broadcastLobby();
+        this.broadcastGame();
+        return { ok: true };
+    }
+
+    /** Apply a human's in-game intent for their own seat. */
+    applyIntent(socket: Socket, intent: Intent): void {
+        if (!this.session) return;
+        const seat = this.seatOf(socket);
+        if (seat === -1) return;
+        try {
+            this.session.applyIntent(seat, intent);
+        } catch {
+            // Reject forged/illegal intents silently, like the local path.
+        }
+    }
+
+    /** Free a leaving human's seat (pre-game) and report whether anyone remains. */
+    leave(socket: Socket): void {
+        const seat = this.seatOf(socket);
+        if (seat === -1) return;
+        if (!this.started) {
+            this.seats[seat] = { bot: false, name: `Seat ${seat + 1}` };
+            this.ensureEastOccupied();
+        } else {
+            // Mid-game: hold the seat but drop the socket. A bot does not take
+            // over (kept simple for Phase 2); the player may reconnect to a new
+            // seat. Reconnection with session tokens is Phase 3.
+            this.seats[seat] = { ...this.seats[seat], socket: undefined };
+        }
+        if (this.isEmpty) {
+            this.dispose();
+            this.onEmpty(this.code);
+        }
+    }
+
+    dispose(): void {
+        this.unsubscribe?.();
+        this.session?.dispose();
+        this.session = undefined;
+    }
+
+    /** Push the right snapshot (lobby or game view) to every connected human. */
+    pushAll(): void {
+        if (this.started) this.broadcastGame();
+        else this.broadcastLobby();
+    }
+
+    /** Push a snapshot to one connected human (e.g. right after they join). */
+    pushTo(socket: Socket): void {
+        const seat = this.seatOf(socket);
+        if (seat === -1) return;
+        if (this.started && this.session) {
+            socket.emit('view', viewFor(this.session.getState(), seat));
+        } else {
+            socket.emit('lobby', this.lobbyStateFor(seat));
+        }
+    }
+
+    private broadcastLobby(): void {
+        for (const s of this.seats) {
+            if (s.socket) s.socket.emit('lobby', this.lobbyStateFor(this.seatOf(s.socket)));
+        }
+    }
+
+    private broadcastGame(): void {
+        if (!this.session) return;
+        const state = this.session.getState();
+        for (const s of this.seats) {
+            if (s.socket) s.socket.emit('view', viewFor(state, this.seatOf(s.socket)));
+        }
+    }
+
+    private lobbyStateFor(mySeat: number): LobbyState {
+        const seats: LobbySeat[] = this.seats.map((s, index) => ({
+            index,
+            name: s.name,
+            occupant: s.socket ? 'human' : s.bot ? 'bot' : 'empty',
+            isYou: index === mySeat,
+            isEast: index === this.eastIndex,
+        }));
+        return { code: this.code, mySeat, seats, started: this.started };
+    }
+
+    private seatOf(socket: Socket): number {
+        return this.seats.findIndex(s => s.socket === socket);
     }
 }

@@ -5,7 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import express from 'express';
 import { Server } from 'socket.io';
-import { GameRoom } from './room';
+import { Lobby } from './lobby';
 
 // Authoritative game server. Serves the built client and runs the game over
 // Socket.IO. Host/port/CORS are all env-configurable so the same server works
@@ -44,8 +44,8 @@ app.use(sendApp); // SPA fallback: any unmatched route returns the app
 const httpServer = createServer(app);
 const io = new Server(httpServer, { cors: { origin: corsOrigin } });
 
-const room = new GameRoom(io);
-io.on('connection', (socket) => room.handleConnection(socket));
+const lobby = new Lobby();
+io.on('connection', (socket) => lobby.handleConnection(socket));
 
 httpServer.listen(PORT, HOST, () => {
     console.log(`American Mah Jong server listening on ${HOST}:${PORT}`);
