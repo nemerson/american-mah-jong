@@ -59,6 +59,14 @@ export function decideBotCall(bot: Player, discard: Tile): boolean {
     return withTile.score > without.score;
 }
 
+/**
+ * How many tiles a bot offers on the optional courtesy pass (0-3). Lives in
+ * the engine so the authority — not the UI — owns bot randomness.
+ */
+export function decideBotCourtesyCount(): number {
+    return Math.floor(Math.random() * 4);
+}
+
 export function decideBotCharlestonPass(bot: Player, count: number): Tile[] {
     if (count === 0) return [];
 

@@ -1,12 +1,10 @@
-import React, { useState } from 'react';
-import type { GameState, Tile } from '../types/mahjong';
-import { initializeGame, discardTile, advanceTurn, reorderPlayerHand } from '../engine/game';
-import { executeCharlestonPasses, stopCharleston, BLIND_PASS_PHASES } from '../engine/charleston';
-import type { CharlestonPass } from '../engine/charleston';
-import { decideBotCharlestonPass } from '../engine/bot';
+import React, { useEffect, useMemo, useState } from 'react';
+import type { Player, Tile } from '../types/mahjong';
+import type { GameTransport, PlayerView, PlayerSeatView } from '../net/types';
+import { createTransport } from '../net/createTransport';
 import { checkMahJong, getTileKey } from '../engine/rules';
-import { callDiscard, defaultCallTiles, exchangeJoker, findExposedJokers, resolveBotClaims } from '../engine/calls';
-import { useGameLoop } from '../hooks/useGameLoop';
+import { defaultCallTiles, exposureKey } from '../engine/calls';
+import { BLIND_PASS_PHASES } from '../engine/charleston';
 import { PlayerHand } from './PlayerHand';
 import { MahJongTile } from './Tile';
 import { WinningHandsReference } from './WinningHandsReference';
@@ -29,27 +27,97 @@ const ExposureDisplay: React.FC<{ exposures: Tile[][] }> = ({ exposures }) => {
     );
 };
 
+const OpponentColumn: React.FC<{ seat: PlayerSeatView; side: 'left' | 'right' }> = ({ seat, side }) => (
+    <div className={`opponent-${side}`}>
+        <div className="player-label">{seat.name}</div>
+        <div className="vertical-hand" role="img" aria-label={`${seat.handCount} face-down tiles`}>
+            {Array.from({ length: seat.handCount }).map((_, i) => (
+                <div key={i} className="mini-tile-back" />
+            ))}
+        </div>
+        <ExposureDisplay exposures={seat.exposures} />
+    </div>
+);
+
+// A seat-view exposes only its own hand contents; everything an engine
+// predicate needs from "me" (hand + exposures) is public for my own seat, so
+// reconstruct a Player to reuse defaultCallTiles / checkMahJong unchanged.
+const seatAsPlayer = (seat: PlayerSeatView): Player => ({
+    id: seat.id,
+    name: seat.name,
+    isBot: seat.isBot,
+    hand: seat.hand ?? [],
+    exposures: seat.exposures,
+});
+
+interface ExposedJoker {
+    ownerIndex: number;
+    exposureIndex: number;
+    key: string;
+}
+
+// Same as engine findExposedJokers, but over the (public) seat exposures in a view.
+function findExposedJokersInView(view: PlayerView): ExposedJoker[] {
+    const found: ExposedJoker[] = [];
+    view.seats.forEach((seat, ownerIndex) => {
+        seat.exposures.forEach((exposure, exposureIndex) => {
+            if (exposure.some(t => t.type === 'joker')) {
+                const key = exposureKey(exposure);
+                if (key) found.push({ ownerIndex, exposureIndex, key });
+            }
+        });
+    });
+    return found;
+}
+
 export const GameBoard: React.FC = () => {
-    const [gameState, setGameState] = useState<GameState>(() =>
-        initializeGame(['You', 'Bot 1', 'Bot 2', 'Bot 3']));
+    // One stable transport for this board's lifetime (lazy init runs once).
+    const [transport] = useState<GameTransport>(createTransport);
+
+    const [view, setView] = useState<PlayerView | null>(null);
     const [selectedTileIds, setSelectedTileIds] = useState<string[]>([]);
     const [statusMessage, setStatusMessage] = useState<string | null>(null);
     const [isPaused, setIsPaused] = useState(false);
+    const [handOrder, setHandOrder] = useState<string[]>([]);
 
-    useGameLoop(gameState, setGameState, isPaused);
+    useEffect(() => {
+        const unsub = transport.subscribe(setView);
+        return () => { unsub(); };
+    }, [transport]);
 
-    const handleReorder = (newHand: Tile[]) => {
-        setGameState(reorderPlayerHand(gameState, gameState.players[0].id, newHand));
-    };
+    useEffect(() => () => transport.dispose(), [transport]);
 
-    const humanPlayer = gameState.players[0];
+    // Mirror the local pause flag onto the in-process clock (no-op for remote).
+    useEffect(() => {
+        transport.setPaused?.(isPaused);
+    }, [transport, isPaused]);
+
+    // Drag-reorder is presentation-only and stays local to this client: keep a
+    // display order of tile ids and project the view's hand through it (newly
+    // drawn tiles, absent from the order, sort to the end).
+    const mySeatView = view ? view.seats[view.mySeat] : null;
+    const myHand = useMemo(() => mySeatView?.hand ?? [], [mySeatView]);
+    const orderedHand = useMemo(() => {
+        if (handOrder.length === 0) return myHand;
+        const pos = new Map(handOrder.map((id, i) => [id, i] as const));
+        return [...myHand].sort((a, b) => (pos.get(a.id) ?? Infinity) - (pos.get(b.id) ?? Infinity));
+    }, [myHand, handOrder]);
+
+    if (!view || !mySeatView) return null;
+
+    const humanPlayer = seatAsPlayer(mySeatView);
+    const acrossSeat = view.seats[(view.mySeat + 2) % 4];
+    const rightSeat = view.seats[(view.mySeat + 1) % 4];
+    const leftSeat = view.seats[(view.mySeat + 3) % 4];
+
+    const handleReorder = (newHand: Tile[]) => setHandOrder(newHand.map(t => t.id));
 
     const handleTileClick = (tile: Tile) => {
         if (selectedTileIds.includes(tile.id)) {
             setSelectedTileIds(selectedTileIds.filter(id => id !== tile.id));
         } else {
             // In charleston, allow up to 3 selections
-            if (gameState.phase === 'charleston') {
+            if (view.phase === 'charleston') {
                 const maxTiles = 3;
                 if (selectedTileIds.length < maxTiles) {
                     setSelectedTileIds([...selectedTileIds, tile.id]);
@@ -66,20 +134,20 @@ export const GameBoard: React.FC = () => {
     const resumeClock = () => setIsPaused(false);
 
     const handleDiscard = () => {
-        if (selectedTileIds.length !== 1 || gameState.phase !== 'discard' || gameState.currentPlayerIndex !== 0) return;
-        setGameState(discardTile(gameState, 0, selectedTileIds[0]));
+        if (selectedTileIds.length !== 1 || view.phase !== 'discard' || view.currentPlayerIndex !== view.mySeat) return;
+        transport.send({ type: 'discard', tileId: selectedTileIds[0] });
         setSelectedTileIds([]);
         resumeClock();
     };
 
-    const latestDiscard = gameState.discards.length > 0
-        ? gameState.discards[gameState.discards.length - 1]
+    const latestDiscard = view.discards.length > 0
+        ? view.discards[view.discards.length - 1]
         : null;
 
     // The human may call when someone else discarded and the tiles in hand
     // can legally join the discard as an exposure
-    const canHumanCall = gameState.phase === 'call'
-        && gameState.currentPlayerIndex !== 0
+    const canHumanCall = view.phase === 'call'
+        && view.currentPlayerIndex !== view.mySeat
         && latestDiscard !== null
         && defaultCallTiles(humanPlayer, latestDiscard) !== null;
 
@@ -87,7 +155,7 @@ export const GameBoard: React.FC = () => {
         if (!canHumanCall || !latestDiscard) return;
         const tiles = defaultCallTiles(humanPlayer, latestDiscard);
         if (!tiles) return;
-        setGameState(callDiscard(gameState, 0, tiles.map(t => t.id)));
+        transport.send({ type: 'call', handTileIds: tiles.map(t => t.id) });
         setSelectedTileIds([]);
         setStatusMessage(null);
         resumeClock();
@@ -95,26 +163,31 @@ export const GameBoard: React.FC = () => {
 
     // Decline the discard: bots get their chance, then play moves on
     const handlePassCall = () => {
-        if (gameState.phase !== 'call') return;
-        setGameState(resolveBotClaims(gameState) ?? advanceTurn(gameState));
+        if (view.phase !== 'call') return;
+        transport.send({ type: 'passCall' });
         resumeClock();
     };
 
     // Joker exchange: on the human's turn before discarding, a selected
     // natural tile matching a joker in any exposure may be swapped for it
     const selectedTile = selectedTileIds.length === 1
-        ? humanPlayer.hand.find(t => t.id === selectedTileIds[0])
+        ? myHand.find(t => t.id === selectedTileIds[0])
         : undefined;
-    const jokerSwapTarget = (gameState.phase === 'discard'
-        && gameState.currentPlayerIndex === 0
+    const jokerSwapTarget = (view.phase === 'discard'
+        && view.currentPlayerIndex === view.mySeat
         && selectedTile
         && selectedTile.type !== 'joker')
-        ? findExposedJokers(gameState).find(j => j.key === getTileKey(selectedTile))
+        ? findExposedJokersInView(view).find(j => j.key === getTileKey(selectedTile))
         : undefined;
 
     const handleJokerSwap = () => {
         if (!jokerSwapTarget || !selectedTile) return;
-        setGameState(exchangeJoker(gameState, 0, selectedTile.id, jokerSwapTarget.ownerIndex, jokerSwapTarget.exposureIndex));
+        transport.send({
+            type: 'jokerSwap',
+            handTileId: selectedTile.id,
+            ownerIndex: jokerSwapTarget.ownerIndex,
+            exposureIndex: jokerSwapTarget.exposureIndex,
+        });
         setSelectedTileIds([]);
         setStatusMessage('Swapped your tile for an exposed joker!');
         setTimeout(() => setStatusMessage(null), 3000);
@@ -126,7 +199,7 @@ export const GameBoard: React.FC = () => {
         for (const exp of humanPlayer.exposures) totalTiles += exp.length;
 
         // A discard can complete the hand only if someone else threw it
-        const claimableDiscard = gameState.phase === 'call' && gameState.currentPlayerIndex !== 0
+        const claimableDiscard = view.phase === 'call' && view.currentPlayerIndex !== view.mySeat
             ? latestDiscard
             : null;
         const win = claimableDiscard
@@ -134,7 +207,7 @@ export const GameBoard: React.FC = () => {
             : checkMahJong(humanPlayer);
 
         if (win) {
-            setGameState({ ...gameState, phase: 'end', winner: { playerIndex: 0, ...win } });
+            transport.send({ type: 'callMahJong' });
         } else {
             if (totalTiles !== 14) {
                 setStatusMessage(`Not a valid hand. You have ${totalTiles} tiles — need exactly 14.`);
@@ -146,35 +219,19 @@ export const GameBoard: React.FC = () => {
     };
 
     const handleCharlestonPass = () => {
-        if (!gameState.charlestonPhase) return;
-        const isCourtesy = gameState.charlestonPhase === 'courtesy';
-        const isBlind = BLIND_PASS_PHASES.includes(gameState.charlestonPhase);
+        if (!view.charlestonPhase) return;
+        const isCourtesy = view.charlestonPhase === 'courtesy';
+        const isBlind = BLIND_PASS_PHASES.includes(view.charlestonPhase);
         const validCount = isCourtesy || isBlind ? selectedTileIds.length <= 3 : selectedTileIds.length === 3;
         if (!validCount) return;
 
-        const humanTiles = humanPlayer.hand.filter(t => selectedTileIds.includes(t.id));
-
-        // Generate bot passes — each bot independently picks 0-3 tiles for courtesy
-        const bot1Tiles = decideBotCharlestonPass(gameState.players[1], isCourtesy ? Math.floor(Math.random() * 4) : 3);
-        const bot2Tiles = decideBotCharlestonPass(gameState.players[2], isCourtesy ? Math.floor(Math.random() * 4) : 3);
-        const bot3Tiles = decideBotCharlestonPass(gameState.players[3], isCourtesy ? Math.floor(Math.random() * 4) : 3);
-
-        const passes: CharlestonPass[] = [
-            // On blind-pass turns any shortfall is taken unseen from the incoming stack
-            { fromIndex: 0, toIndex: -1, tiles: humanTiles, blindCount: isBlind ? 3 - humanTiles.length : 0 },
-            { fromIndex: 1, toIndex: -1, tiles: bot1Tiles },
-            { fromIndex: 2, toIndex: -1, tiles: bot2Tiles },
-            { fromIndex: 3, toIndex: -1, tiles: bot3Tiles }
-        ];
-
-        const newState = executeCharlestonPasses(gameState, gameState.charlestonPhase, passes);
-        setGameState(newState);
+        transport.send({ type: 'charlestonPass', tileIds: selectedTileIds });
         setSelectedTileIds([]); // Clear selection after pass
         resumeClock();
     };
 
     const handleStopCharleston = () => {
-        setGameState(stopCharleston(gameState));
+        transport.send({ type: 'stopCharleston' });
         setSelectedTileIds([]);
         setStatusMessage('Charleston stopped — courtesy pass next.');
         setTimeout(() => setStatusMessage(null), 3000);
@@ -182,8 +239,8 @@ export const GameBoard: React.FC = () => {
     };
 
     const getPassDirectionText = () => {
-        if (!gameState.charlestonPhase) return '';
-        const p = gameState.charlestonPhase.toLowerCase();
+        if (!view.charlestonPhase) return '';
+        const p = view.charlestonPhase.toLowerCase();
         if (p.includes('right')) return 'Right';
         if (p.includes('across')) return 'Across';
         if (p.includes('left')) return 'Left';
@@ -192,50 +249,43 @@ export const GameBoard: React.FC = () => {
     };
 
     const handleNewGame = () => {
-        setGameState(initializeGame(['You', 'Bot 1', 'Bot 2', 'Bot 3']));
+        transport.send({ type: 'newGame' });
         setSelectedTileIds([]);
         setStatusMessage(null);
+        setHandOrder([]);
         resumeClock();
     };
 
-    const isCourtesyPhase = gameState.charlestonPhase === 'courtesy';
-    const isBlindPhase = gameState.charlestonPhase !== undefined
-        && BLIND_PASS_PHASES.includes(gameState.charlestonPhase);
+    const isCourtesyPhase = view.charlestonPhase === 'courtesy';
+    const isBlindPhase = view.charlestonPhase !== undefined
+        && BLIND_PASS_PHASES.includes(view.charlestonPhase);
     const canPass = isCourtesyPhase || isBlindPhase
         ? selectedTileIds.length <= 3
         : selectedTileIds.length === 3;
     const blindCount = 3 - selectedTileIds.length;
-    const winner = gameState.winner;
-    const winnerPlayer = winner ? gameState.players[winner.playerIndex] : null;
+    const winner = view.winner;
+    const winnerPlayer = winner ? view.seats[winner.playerIndex] : null;
 
     return (
         <div className="game-board">
             {/* Top Area: Opponent (Across) */}
             <div className="opponent-across">
-                <div className="player-label">{gameState.players[2].name}</div>
-                <PlayerHand hand={gameState.players[2].hand} isFaceDown={true} />
-                <ExposureDisplay exposures={gameState.players[2].exposures} />
+                <div className="player-label">{acrossSeat.name}</div>
+                <PlayerHand count={acrossSeat.handCount} />
+                <ExposureDisplay exposures={acrossSeat.exposures} />
             </div>
 
             {/* Middle Area: Left/Right Opponents + Discard Center */}
             <div className="middle-section">
-                <div className="opponent-left">
-                    <div className="player-label">{gameState.players[3].name}</div>
-                    <div className="vertical-hand" role="img" aria-label={`${gameState.players[3].hand.length} face-down tiles`}>
-                        {Array.from({ length: gameState.players[3].hand.length }).map((_, i) => (
-                            <div key={i} className="mini-tile-back" />
-                        ))}
-                    </div>
-                    <ExposureDisplay exposures={gameState.players[3].exposures} />
-                </div>
+                <OpponentColumn seat={leftSeat} side="left" />
 
                 <div className="center-table">
                     <div className="phase-indicator title-glow">
-                        Phase: {gameState.phase.toUpperCase()}
-                        {gameState.charlestonPhase && ` (${gameState.charlestonPhase})`}
+                        Phase: {view.phase.toUpperCase()}
+                        {view.charlestonPhase && ` (${view.charlestonPhase})`}
                     </div>
                     <div className="wall-counter">
-                        Tiles remaining: {gameState.wall.length}
+                        Tiles remaining: {view.wallCount}
                     </div>
                     {isPaused && (
                         <div className="paused-banner" role="status">
@@ -244,15 +294,15 @@ export const GameBoard: React.FC = () => {
                     )}
 
                     <div className="discard-pile">
-                        {gameState.discards.length === 0 ? (
+                        {view.discards.length === 0 ? (
                             <div className="empty-discards">No Discards Yet</div>
                         ) : (
                             <div className="recent-discards-container">
-                                {gameState.discards.map((tile, i) => (
-                                    <div key={`${tile.id}-${i}`} className={`discarded-tile-wrapper ${i === gameState.discards.length - 1 && gameState.phase === 'call' ? 'latest-discard' : ''}`}>
+                                {view.discards.map((tile, i) => (
+                                    <div key={`${tile.id}-${i}`} className={`discarded-tile-wrapper ${i === view.discards.length - 1 && view.phase === 'call' ? 'latest-discard' : ''}`}>
                                         <MahJongTile
                                             tile={tile}
-                                            selected={i === gameState.discards.length - 1 && gameState.phase === 'call'}
+                                            selected={i === view.discards.length - 1 && view.phase === 'call'}
                                         />
                                     </div>
                                 ))}
@@ -261,15 +311,7 @@ export const GameBoard: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="opponent-right">
-                    <div className="player-label">{gameState.players[1].name}</div>
-                    <div className="vertical-hand" role="img" aria-label={`${gameState.players[1].hand.length} face-down tiles`}>
-                        {Array.from({ length: gameState.players[1].hand.length }).map((_, i) => (
-                            <div key={i} className="mini-tile-back" />
-                        ))}
-                    </div>
-                    <ExposureDisplay exposures={gameState.players[1].exposures} />
-                </div>
+                <OpponentColumn seat={rightSeat} side="right" />
             </div>
 
             {/* Status Message */}
@@ -278,14 +320,14 @@ export const GameBoard: React.FC = () => {
             )}
 
             {/* End of game */}
-            {gameState.phase === 'end' && (
+            {view.phase === 'end' && (
                 <div className="end-overlay" role="dialog" aria-label="Game over">
                     <div className="end-panel">
                         <h2 className="end-title">
                             {winner
-                                ? winner.playerIndex === 0
+                                ? winner.playerIndex === view.mySeat
                                     ? '🀄 Mah Jong — You win! 🎉'
-                                    : `🀄 ${gameState.players[winner.playerIndex].name} wins`
+                                    : `🀄 ${view.seats[winner.playerIndex].name} wins`
                                 : 'Wall game — no winner'}
                         </h2>
                         {winner && (
@@ -295,7 +337,7 @@ export const GameBoard: React.FC = () => {
                         )}
                         {winnerPlayer && (
                             <div className="end-hand">
-                                {[...winnerPlayer.exposures.flat(), ...winnerPlayer.hand].map(tile => (
+                                {[...winnerPlayer.exposures.flat(), ...(winnerPlayer.hand ?? [])].map(tile => (
                                     <div key={tile.id} className="exposure-tile-wrapper">
                                         <MahJongTile tile={tile} />
                                     </div>
@@ -315,7 +357,7 @@ export const GameBoard: React.FC = () => {
                 <ExposureDisplay exposures={humanPlayer.exposures} />
                 <div className="tile-count">Your tiles: {humanPlayer.hand.length}</div>
                 <div className="player-actions">
-                    {gameState.phase === 'charleston' ? (
+                    {view.phase === 'charleston' ? (
                         <>
                             <button
                                 className="action-btn primary-btn"
@@ -329,7 +371,7 @@ export const GameBoard: React.FC = () => {
                                     ? `Blind Pass ${getPassDirectionText()} (${selectedTileIds.length} + ${blindCount} unseen)`
                                     : `Pass ${isCourtesyPhase ? '0-3' : '3'} Tiles ${getPassDirectionText()} (${selectedTileIds.length}/3)`}
                             </button>
-                            {gameState.charlestonPhase === 'secondLeft' && (
+                            {view.charlestonPhase === 'secondLeft' && (
                                 <button
                                     className="action-btn"
                                     onClick={handleStopCharleston}
@@ -343,7 +385,7 @@ export const GameBoard: React.FC = () => {
                         <>
                             <button
                                 className="action-btn"
-                                disabled={selectedTileIds.length !== 1 || gameState.phase !== 'discard' || gameState.currentPlayerIndex !== 0}
+                                disabled={selectedTileIds.length !== 1 || view.phase !== 'discard' || view.currentPlayerIndex !== view.mySeat}
                                 onClick={handleDiscard}
                             >
                                 Discard Selected
@@ -352,13 +394,13 @@ export const GameBoard: React.FC = () => {
                                 className={`action-btn ${canHumanCall ? 'call-ready' : ''}`}
                                 disabled={!canHumanCall}
                                 onClick={handleCall}
-                                title={gameState.phase === 'call' && !canHumanCall
+                                title={view.phase === 'call' && !canHumanCall
                                     ? 'You need two matching tiles in hand (or one plus a joker) to call'
                                     : undefined}
                             >
                                 Call Discard
                             </button>
-                            {gameState.phase === 'call' && (
+                            {view.phase === 'call' && (
                                 <button className="action-btn" onClick={handlePassCall}>
                                     Pass
                                 </button>
@@ -379,7 +421,7 @@ export const GameBoard: React.FC = () => {
                             </button>
                         </>
                     )}
-                    {gameState.phase !== 'end' && (
+                    {view.phase !== 'end' && (
                         <button
                             className={`action-btn pause-btn ${isPaused ? 'is-paused' : ''}`}
                             onClick={() => setIsPaused(p => !p)}
@@ -392,7 +434,7 @@ export const GameBoard: React.FC = () => {
                     )}
                 </div>
                 <PlayerHand
-                    hand={humanPlayer.hand}
+                    hand={orderedHand}
                     onTileClick={handleTileClick}
                     selectedTileIds={selectedTileIds}
                     onReorder={handleReorder}

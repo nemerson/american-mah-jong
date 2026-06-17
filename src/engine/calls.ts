@@ -144,6 +144,12 @@ export function exchangeJoker(
     ownerIndex: number,
     exposureIndex: number,
 ): GameState {
+    // Standard rule, enforced here rather than relying on the UI: only on your
+    // own turn, after drawing and before discarding.
+    if (state.phase !== 'discard' || state.currentPlayerIndex !== playerIndex) {
+        throw new Error('Joker exchange is only allowed on your turn, before discarding');
+    }
+
     const player = state.players[playerIndex];
     const handTile = player.hand.find(t => t.id === handTileId);
     if (!handTile || handTile.type === 'joker') {

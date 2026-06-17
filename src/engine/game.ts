@@ -1,19 +1,26 @@
 import type { GameState, Player, Tile } from '../types/mahjong';
 import { generateDeck, shuffleDeck } from './deck';
 
-export function initializeGame(playerNames: string[]): GameState {
+export interface InitOptions {
+    /** Which seat is East (deals 14, starts). Defaults to seat 0. */
+    eastIndex?: number;
+    /** Per-seat bot flag. Defaults to "everyone but seat 0 is a bot". */
+    isBot?: boolean[];
+}
+
+export function initializeGame(playerNames: string[], options: InitOptions = {}): GameState {
     const deck = shuffleDeck(generateDeck());
+    const eastPlayerIndex = options.eastIndex ?? 0;
     const players: Player[] = playerNames.map((name, index) => ({
         id: `player-${index}`,
         name,
-        isBot: index !== 0, // Assumption: Player 0 is the human user
+        // Default keeps single-player's "seat 0 is the human" assumption
+        isBot: options.isBot ? options.isBot[index] : index !== 0,
         hand: [],
         exposures: []
     }));
 
     // Deal 13 tiles to everyone, 14 to East
-    const eastPlayerIndex = 0; // For now, human is always East
-
     for (let i = 0; i < players.length; i++) {
         const tilesToDeal = i === eastPlayerIndex ? 14 : 13;
         players[i].hand = deck.splice(0, tilesToDeal);
