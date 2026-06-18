@@ -83,36 +83,6 @@
     animation: pulseGold 1.5s ease-in-out infinite;
 }
 
-/* Reference card overlay */
-.reference-overlay {
-    position: fixed;
-    inset: 0;
-    background: rgba(8, 12, 10, 0.85);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 200;
-    backdrop-filter: blur(4px);
-    animation: fadeInUp 0.25s ease;
-}
-
-.reference-overlay-panel {
-    background: linear-gradient(165deg, rgba(32, 38, 34, 0.98), rgba(14, 18, 16, 0.98));
-    border: 1px solid var(--accent-gold);
-    border-radius: var(--radius-lg);
-    padding: 24px 32px;
-    max-width: 90vw;
-    max-height: 85vh;
-    overflow-y: auto;
-    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
-}
-
-.reference-close-btn {
-    float: right;
-    margin-bottom: 12px;
-    font-size: 0.8rem;
-    padding: 6px 14px;
-}
 
 .opponent-across {
     flex: 0 0 auto;

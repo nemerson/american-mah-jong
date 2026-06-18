@@ -89,7 +89,6 @@ export const GameBoard: React.FC<GameBoardProps> = ({ transport: injected }) => 
     const [statusMessage, setStatusMessage] = useState<string | null>(null);
     const [isPaused, setIsPaused] = useState(false);
     const [handOrder, setHandOrder] = useState<string[]>([]);
-    const [showReference, setShowReference] = useState(false);
 
     useEffect(() => {
         const unsub = transport.subscribe(setView);
@@ -309,26 +308,6 @@ export const GameBoard: React.FC<GameBoardProps> = ({ transport: injected }) => 
 
     return (
         <div className="game-board">
-            {/* Reference card toggle button (top-right corner) */}
-            <button
-                className="action-btn reference-btn"
-                onClick={() => setShowReference(r => !r)}
-                title="Open winning hands reference card"
-                aria-expanded={showReference}
-            >
-                Reference Card
-            </button>
-
-            {/* Reference card overlay */}
-            {showReference && (
-                <div className="reference-overlay" role="dialog" aria-label="Winning hands reference" onClick={() => setShowReference(false)}>
-                    <div className="reference-overlay-panel" onClick={e => e.stopPropagation()}>
-                        <button className="action-btn reference-close-btn" onClick={() => setShowReference(false)}>✕ Close</button>
-                        <WinningHandsReference />
-                    </div>
-                </div>
-            )}
-
             {/* Top Area: Opponent (Across) */}
             <div className={`opponent-across${isAcrossActive ? ' is-active-seat' : ''}`}>
                 <div className={`player-label${isAcrossActive ? ' is-active' : ''}`}>{acrossSeat.name}</div>
@@ -413,6 +392,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ transport: injected }) => 
 
             {/* Bottom Area: Human Player */}
             <div className={`human-player-area${isMyActiveTurn ? ' is-active-seat' : ''}`}>
+                <WinningHandsReference />
                 <ExposureDisplay exposures={humanPlayer.exposures} />
                 <div className="tile-count">Your tiles: {humanPlayer.hand.length}</div>
                 <div className="player-actions">
