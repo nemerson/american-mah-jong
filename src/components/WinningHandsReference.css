@@ -76,14 +76,30 @@
     align-items: center;
     justify-content: space-between;
     gap: 6px;
-    padding: 0 2px;
+    padding: 1px 2px;
     border-radius: 2px;
     line-height: 1.45;
-    cursor: default;
+    cursor: pointer;
+    transition: background 0.15s;
+    /* inset left bar rendered via box-shadow — no layout shift */
+    box-shadow: inset 3px 0 0 transparent;
 }
 
 .hand-row:hover {
     background: rgba(122, 99, 52, 0.14);
+}
+
+.hand-row.is-target {
+    background: rgba(180, 130, 20, 0.18);
+    box-shadow: inset 3px 0 0 #c49a2e;
+}
+
+.hand-row.is-target .hand-pattern {
+    font-weight: 800;
+}
+
+.hand-row.is-target .hand-points {
+    color: #c49a2e;
 }
 
 .hand-pattern {
