@@ -26,6 +26,14 @@
    Table mats — selected via [data-mat] on the app shell.
    --mat-center/--mat-edge paint the felt, --rail-a/--rail-b the
    wooden frame, --mat-trim the inlay line around the playfield.
+
+   --mat-motif is an OPTIONAL low-contrast background image painted
+   by .game-board::after, BEHIND the tiles. It is radially masked so
+   it fades out under the center light pool — tiles must always pop
+   over a clean center. Keep motif opacity/contrast low; it is felt
+   embroidery, never a competing graphic. --mat-motif-size sets the
+   tile size (defaults to a single centered medallion when 'auto').
+   --mat-motif-ink tints the motif (a translucent thread color).
    ============================================================ */
 
 .app-shell,
@@ -35,6 +43,23 @@
   --rail-a: #8b5e34;
   --rail-b: #4a2d14;
   --mat-trim: rgba(212, 175, 55, 0.35);
+  /* faint gold center medallion + corner flourishes */
+  --mat-motif-ink: rgba(225, 196, 120, 0.5);
+  --mat-motif:
+    radial-gradient(circle at 50% 46%, transparent 0 88px, var(--mat-motif-ink) 88px 89px, transparent 90px),
+    radial-gradient(circle at 50% 46%, transparent 0 70px, var(--mat-motif-ink) 70px 71px, transparent 72px),
+    conic-gradient(from 0deg at 50% 46%,
+      transparent 0deg, var(--mat-motif-ink) 2deg, transparent 4deg,
+      transparent 41deg, var(--mat-motif-ink) 43deg, transparent 45deg,
+      transparent 86deg, var(--mat-motif-ink) 88deg, transparent 90deg,
+      transparent 131deg, var(--mat-motif-ink) 133deg, transparent 135deg,
+      transparent 176deg, var(--mat-motif-ink) 178deg, transparent 180deg,
+      transparent 221deg, var(--mat-motif-ink) 223deg, transparent 225deg,
+      transparent 266deg, var(--mat-motif-ink) 268deg, transparent 270deg,
+      transparent 311deg, var(--mat-motif-ink) 313deg, transparent 315deg,
+      transparent 356deg, var(--mat-motif-ink) 358deg, transparent 360deg);
+  --mat-motif-size: auto;
+  --mat-motif-opacity: 0.5;
 }
 
 [data-mat='burgundy'] {
@@ -43,6 +68,14 @@
   --rail-a: #4a2e1d;
   --rail-b: #241509;
   --mat-trim: rgba(222, 184, 135, 0.3);
+  /* damask: interlocking diamond lattice with center dots */
+  --mat-motif-ink: rgba(232, 200, 160, 0.4);
+  --mat-motif:
+    repeating-linear-gradient(45deg, transparent 0 38px, var(--mat-motif-ink) 38px 39px, transparent 39px 40px),
+    repeating-linear-gradient(-45deg, transparent 0 38px, var(--mat-motif-ink) 38px 39px, transparent 39px 40px),
+    radial-gradient(circle at 50% 50%, var(--mat-motif-ink) 0 1.5px, transparent 2px);
+  --mat-motif-size: 80px 80px, 80px 80px, 80px 80px;
+  --mat-motif-opacity: 0.55;
 }
 
 [data-mat='midnight'] {
@@ -51,6 +84,18 @@
   --rail-a: #3f4756;
   --rail-b: #161b24;
   --mat-trim: rgba(148, 180, 220, 0.3);
+  /* constellation field: scattered stars of varied size */
+  --mat-motif-ink: rgba(200, 220, 255, 0.6);
+  --mat-motif:
+    radial-gradient(circle at 12% 18%, var(--mat-motif-ink) 0 1.4px, transparent 2px),
+    radial-gradient(circle at 68% 8%, var(--mat-motif-ink) 0 1px, transparent 1.6px),
+    radial-gradient(circle at 84% 34%, var(--mat-motif-ink) 0 1.8px, transparent 2.4px),
+    radial-gradient(circle at 32% 52%, var(--mat-motif-ink) 0 1px, transparent 1.6px),
+    radial-gradient(circle at 54% 78%, var(--mat-motif-ink) 0 1.5px, transparent 2px),
+    radial-gradient(circle at 90% 82%, var(--mat-motif-ink) 0 1px, transparent 1.6px),
+    radial-gradient(circle at 8% 88%, var(--mat-motif-ink) 0 1.3px, transparent 1.9px);
+  --mat-motif-size: 360px 320px;
+  --mat-motif-opacity: 0.7;
 }
 
 [data-mat='walnut'] {
@@ -59,6 +104,14 @@
   --rail-a: #33200f;
   --rail-b: #170d05;
   --mat-trim: rgba(232, 196, 138, 0.3);
+  /* wood-grain inlay ring: concentric arcs around the center */
+  --mat-motif-ink: rgba(60, 34, 16, 0.55);
+  --mat-motif:
+    radial-gradient(circle at 50% 46%, transparent 0 132px, var(--mat-motif-ink) 132px 134px, transparent 135px),
+    radial-gradient(circle at 50% 46%, transparent 0 120px, var(--mat-motif-ink) 120px 121px, transparent 122px),
+    repeating-radial-gradient(circle at 50% 46%, transparent 0 5px, var(--mat-motif-ink) 5px 5.6px, transparent 6px 11px);
+  --mat-motif-size: auto;
+  --mat-motif-opacity: 0.45;
 }
 
 [data-mat='teal'] {
@@ -67,6 +120,50 @@
   --rail-a: #6b4f33;
   --rail-b: #362615;
   --mat-trim: rgba(255, 255, 255, 0.25);
+  /* rolling wave bands (seigaiha-style) */
+  --mat-motif-ink: rgba(220, 245, 240, 0.45);
+  --mat-motif:
+    radial-gradient(circle at 50% 100%, transparent 0 26px, var(--mat-motif-ink) 26px 27.5px, transparent 28px),
+    radial-gradient(circle at 50% 100%, transparent 0 16px, var(--mat-motif-ink) 16px 17.5px, transparent 18px),
+    radial-gradient(circle at 50% 100%, transparent 0 6px, var(--mat-motif-ink) 6px 7.5px, transparent 8px);
+  --mat-motif-size: 60px 30px;
+  --mat-motif-opacity: 0.55;
+}
+
+[data-mat='horse'] {
+  --mat-center: #8a2f1d;
+  --mat-edge: #45120a;
+  --rail-a: #7a5320;
+  --rail-b: #3a2710;
+  --mat-trim: rgba(240, 200, 110, 0.4);
+  /* Year of the Horse: Chinese fret (key) border + center sun disc.
+     The fret tiles only along the edges; the disc is a separate
+     centered layer. */
+  --mat-motif-ink: rgba(245, 210, 130, 0.55);
+  --mat-motif:
+    radial-gradient(circle at 50% 46%, var(--mat-motif-ink) 0 2px, transparent 3px),
+    radial-gradient(circle at 50% 46%, transparent 0 54px, var(--mat-motif-ink) 54px 56px, transparent 57px),
+    repeating-conic-gradient(from 0deg at 50% 46%,
+      var(--mat-motif-ink) 0deg 2deg, transparent 2deg 13deg);
+  --mat-motif-size: auto;
+  --mat-motif-opacity: 0.5;
+}
+
+[data-mat='deco'] {
+  --mat-center: #20312f;
+  --mat-edge: #0c1716;
+  --rail-a: #1c1c1f;
+  --rail-b: #0a0a0c;
+  --mat-trim: rgba(214, 178, 110, 0.5);
+  /* Art Deco Parlor: center sunburst (fan rays) + stepped chevrons */
+  --mat-motif-ink: rgba(214, 178, 110, 0.55);
+  --mat-motif:
+    conic-gradient(from 0deg at 50% 46%,
+      var(--mat-motif-ink) 0deg 1deg, transparent 1deg 14deg,
+      var(--mat-motif-ink) 14deg 15deg, transparent 15deg 30deg),
+    radial-gradient(circle at 50% 46%, transparent 0 150px, var(--mat-motif-ink) 150px 151px, transparent 152px);
+  --mat-motif-size: auto;
+  --mat-motif-opacity: 0.5;
 }
 
 * {

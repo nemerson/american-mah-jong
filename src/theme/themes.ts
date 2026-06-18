@@ -77,6 +77,22 @@ export const MATS: MatOption[] = [
         feltCenter: '#1f6f6b',
         feltEdge: '#11403e',
         rail: '#4a3728'
+    },
+    {
+        id: 'horse',
+        name: 'Year of the Horse',
+        description: 'Crimson + gold fret border',
+        feltCenter: '#8a2f1d',
+        feltEdge: '#45120a',
+        rail: '#7a5320'
+    },
+    {
+        id: 'deco',
+        name: 'Art Deco Parlor',
+        description: 'Emerald & gilt sunburst',
+        feltCenter: '#20312f',
+        feltEdge: '#0c1716',
+        rail: '#1c1c1f'
     }
 ];
 
