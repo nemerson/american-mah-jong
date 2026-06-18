@@ -27,9 +27,9 @@ const ExposureDisplay: React.FC<{ exposures: Tile[][] }> = ({ exposures }) => {
     );
 };
 
-const OpponentColumn: React.FC<{ seat: PlayerSeatView; side: 'left' | 'right' }> = ({ seat, side }) => (
-    <div className={`opponent-${side}`}>
-        <div className="player-label">{seat.name}</div>
+const OpponentColumn: React.FC<{ seat: PlayerSeatView; side: 'left' | 'right'; isActive: boolean }> = ({ seat, side, isActive }) => (
+    <div className={`opponent-${side}${isActive ? ' is-active-seat' : ''}`}>
+        <div className={`player-label${isActive ? ' is-active' : ''}`}>{seat.name}</div>
         <div className="vertical-hand" role="img" aria-label={`${seat.handCount} face-down tiles`}>
             {Array.from({ length: seat.handCount }).map((_, i) => (
                 <div key={i} className="mini-tile-back" />
@@ -89,6 +89,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ transport: injected }) => 
     const [statusMessage, setStatusMessage] = useState<string | null>(null);
     const [isPaused, setIsPaused] = useState(false);
     const [handOrder, setHandOrder] = useState<string[]>([]);
+    const [showReference, setShowReference] = useState(false);
 
     useEffect(() => {
         const unsub = transport.subscribe(setView);
@@ -119,6 +120,13 @@ export const GameBoard: React.FC<GameBoardProps> = ({ transport: injected }) => 
     const acrossSeat = view.seats[(view.mySeat + 2) % 4];
     const rightSeat = view.seats[(view.mySeat + 1) % 4];
     const leftSeat = view.seats[(view.mySeat + 3) % 4];
+
+    // Active-seat highlighting: only meaningful during draw/discard turns.
+    const showTurnIndicator = view.phase === 'draw' || view.phase === 'discard';
+    const isMyActiveTurn = showTurnIndicator && view.currentPlayerIndex === view.mySeat;
+    const isAcrossActive = showTurnIndicator && view.currentPlayerIndex === (view.mySeat + 2) % 4;
+    const isRightActive = showTurnIndicator && view.currentPlayerIndex === (view.mySeat + 1) % 4;
+    const isLeftActive = showTurnIndicator && view.currentPlayerIndex === (view.mySeat + 3) % 4;
 
     const handleReorder = (newHand: Tile[]) => setHandOrder(newHand.map(t => t.id));
 
@@ -258,6 +266,29 @@ export const GameBoard: React.FC<GameBoardProps> = ({ transport: injected }) => 
         return '';
     };
 
+    const getPhaseLabel = (): string => {
+        const currentName = view.seats[view.currentPlayerIndex]?.name ?? '';
+        const isMine = view.currentPlayerIndex === view.mySeat;
+        switch (view.phase) {
+            case 'charleston': {
+                if (!view.charlestonPhase) return 'Charleston';
+                if (view.charlestonPhase === 'courtesy') return 'Courtesy pass — select 0–3 tiles';
+                const num = view.charlestonPhase.startsWith('first') ? '1 of 2' : '2 of 2';
+                return `Charleston ${num} · Pass ${getPassDirectionText()}`;
+            }
+            case 'draw':
+                return isMine ? 'Your turn · Drawing…' : `${currentName}'s turn`;
+            case 'discard':
+                return isMine ? 'Your turn · Discard a tile' : `${currentName} is discarding`;
+            case 'call':
+                return canHumanCall ? 'Call or pass this discard' : 'Waiting for calls…';
+            case 'end':
+                return 'Game over';
+            default:
+                return view.phase;
+        }
+    };
+
     const handleNewGame = () => {
         transport.send({ type: 'newGame' });
         setSelectedTileIds([]);
@@ -278,21 +309,40 @@ export const GameBoard: React.FC<GameBoardProps> = ({ transport: injected }) => 
 
     return (
         <div className="game-board">
+            {/* Reference card toggle button (top-right corner) */}
+            <button
+                className="action-btn reference-btn"
+                onClick={() => setShowReference(r => !r)}
+                title="Open winning hands reference card"
+                aria-expanded={showReference}
+            >
+                Reference Card
+            </button>
+
+            {/* Reference card overlay */}
+            {showReference && (
+                <div className="reference-overlay" role="dialog" aria-label="Winning hands reference" onClick={() => setShowReference(false)}>
+                    <div className="reference-overlay-panel" onClick={e => e.stopPropagation()}>
+                        <button className="action-btn reference-close-btn" onClick={() => setShowReference(false)}>✕ Close</button>
+                        <WinningHandsReference />
+                    </div>
+                </div>
+            )}
+
             {/* Top Area: Opponent (Across) */}
-            <div className="opponent-across">
-                <div className="player-label">{acrossSeat.name}</div>
+            <div className={`opponent-across${isAcrossActive ? ' is-active-seat' : ''}`}>
+                <div className={`player-label${isAcrossActive ? ' is-active' : ''}`}>{acrossSeat.name}</div>
                 <PlayerHand count={acrossSeat.handCount} />
                 <ExposureDisplay exposures={acrossSeat.exposures} />
             </div>
 
             {/* Middle Area: Left/Right Opponents + Discard Center */}
             <div className="middle-section">
-                <OpponentColumn seat={leftSeat} side="left" />
+                <OpponentColumn seat={leftSeat} side="left" isActive={isLeftActive} />
 
                 <div className="center-table">
-                    <div className="phase-indicator title-glow">
-                        Phase: {view.phase.toUpperCase()}
-                        {view.charlestonPhase && ` (${view.charlestonPhase})`}
+                    <div className={`phase-indicator title-glow${isMyActiveTurn ? ' is-my-turn' : ''}`}>
+                        {getPhaseLabel()}
                     </div>
                     <div className="wall-counter">
                         Tiles remaining: {view.wallCount}
@@ -321,7 +371,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ transport: injected }) => 
                     </div>
                 </div>
 
-                <OpponentColumn seat={rightSeat} side="right" />
+                <OpponentColumn seat={rightSeat} side="right" isActive={isRightActive} />
             </div>
 
             {/* Status Message */}
@@ -362,8 +412,7 @@ export const GameBoard: React.FC<GameBoardProps> = ({ transport: injected }) => 
             )}
 
             {/* Bottom Area: Human Player */}
-            <div className="human-player-area">
-                <WinningHandsReference />
+            <div className={`human-player-area${isMyActiveTurn ? ' is-active-seat' : ''}`}>
                 <ExposureDisplay exposures={humanPlayer.exposures} />
                 <div className="tile-count">Your tiles: {humanPlayer.hand.length}</div>
                 <div className="player-actions">
@@ -410,19 +459,22 @@ export const GameBoard: React.FC<GameBoardProps> = ({ transport: injected }) => 
                             >
                                 Call Discard
                             </button>
-                            {view.phase === 'call' && (
-                                <button className="action-btn" onClick={handlePassCall}>
-                                    Pass
-                                </button>
-                            )}
-                            {jokerSwapTarget && (
-                                <button
-                                    className="action-btn"
-                                    onClick={handleJokerSwap}
-                                >
-                                    Swap for Joker
-                                </button>
-                            )}
+                            <button
+                                className="action-btn"
+                                style={{ visibility: view.phase === 'call' ? 'visible' : 'hidden' }}
+                                tabIndex={view.phase === 'call' ? 0 : -1}
+                                onClick={handlePassCall}
+                            >
+                                Pass
+                            </button>
+                            <button
+                                className="action-btn"
+                                style={{ visibility: jokerSwapTarget ? 'visible' : 'hidden' }}
+                                tabIndex={jokerSwapTarget ? 0 : -1}
+                                onClick={handleJokerSwap}
+                            >
+                                Swap for Joker
+                            </button>
                             <button
                                 className="action-btn primary-btn"
                                 onClick={handleCallMahJong}
