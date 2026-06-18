@@ -23,7 +23,10 @@ export interface DragonTile {
 
 export interface FlowerTile {
     type: 'flower';
-    value: 1 | 2 | 3 | 4; // Often numbered 1-4 for seasons/flowers
+    // 1–8: the traditional set is 4 Flowers (1–4) + 4 Seasons (5–8).
+    // Purely cosmetic — all flowers are interchangeable in the rules
+    // (the matcher keys every flower to 'flower' regardless of value).
+    value: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
     id: string;
 }
 

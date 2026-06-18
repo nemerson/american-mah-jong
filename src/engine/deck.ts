@@ -41,10 +41,11 @@ export function generateDeck(): Tile[] {
         }
     }
 
-    // Flowers
+    // Flowers — the 8 tiles each get a unique value 1–8 (4 Flowers + 4
+    // Seasons) so each can render a distinct face. They remain fully
+    // interchangeable in the rules; the value is cosmetic only.
     for (let i = 0; i < 8; i++) {
-        // Simplification: treating all flowers identically for now, though traditionally they have pairs/seasons
-        addTile({ type: 'flower', value: ((i % 4) + 1) as FlowerTile['value'] } as unknown as Tile);
+        addTile({ type: 'flower', value: (i + 1) as FlowerTile['value'] } as unknown as Tile);
     }
 
     // Jokers

@@ -84,6 +84,38 @@
     --tile-back-emblem: rgba(253, 242, 243, 0.25);
 }
 
+[data-tiles='neon'] {
+    --tile-face-flat: #14131f;
+    --tile-face-bg: linear-gradient(155deg, #1e1c2e 0%, #14131f 55%, #0c0b14 100%);
+    --tile-face-border: #3a2f5c;
+    --tile-depth-bg: linear-gradient(155deg, #120f1f, #07060c);
+    --tile-depth-border: #2a2247;
+    --tile-ink: #e9f7ff;
+    --tile-red: #ff3da6;
+    --tile-green: #36f5c2;
+    --tile-blue: #36b6ff;
+    --tile-gold: #ffd24a;
+    --tile-back-bg: linear-gradient(155deg, #241d3f, #110d20);
+    --tile-back-border: #4a3a7a;
+    --tile-back-emblem: rgba(120, 230, 255, 0.4);
+}
+
+[data-tiles='watercolor'] {
+    --tile-face-flat: #f9f6ef;
+    --tile-face-bg: linear-gradient(155deg, #fdfbf6 0%, #f4efe4 55%, #ebe3d2 100%);
+    --tile-face-border: #d8cdb6;
+    --tile-depth-bg: linear-gradient(155deg, #cfc6b2, #b3a98f);
+    --tile-depth-border: #9c917a;
+    --tile-ink: #3a4a52;
+    --tile-red: #c96a8e;
+    --tile-green: #6fa07a;
+    --tile-blue: #6a93b8;
+    --tile-gold: #c79a4e;
+    --tile-back-bg: linear-gradient(155deg, #7fa3a0, #51736f);
+    --tile-back-border: #3e5b57;
+    --tile-back-emblem: rgba(253, 251, 246, 0.35);
+}
+
 /* ============================================================
    Tile structure
    ============================================================ */

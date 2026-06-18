@@ -14,10 +14,23 @@ export interface MatOption {
     rail: string;
 }
 
+// How TileFace renders the artwork for a set. Colors still come from CSS
+// ([data-tiles] in Tile.css); artStyle controls the *drawing treatment* —
+// the thing that makes a set a real design rather than a recolor.
+export type TileArtStyle =
+    | 'classic'    // crisp tournament ink (Ivory) — the Stage 1 look
+    | 'engraved'   // carved-stone bevel + inner highlight (Jade)
+    | 'retro'      // rounded, bold, art-deco flair (Bakelite)
+    | 'inlay'      // thin gold-leaf outlines (Onyx)
+    | 'linework'   // delicate thin strokes (Rose)
+    | 'neon'       // glowing outline, no fill (Neon Arcade)
+    | 'watercolor'; // soft painted washes (Watercolor Garden)
+
 export interface TileSetOption {
     id: string;
     name: string;
     description: string;
+    artStyle: TileArtStyle;
     // preview colors for the picker
     face: string;
     ink: string;
@@ -72,6 +85,7 @@ export const TILE_SETS: TileSetOption[] = [
         id: 'ivory',
         name: 'Classic Ivory',
         description: 'Crisp tournament white',
+        artStyle: 'classic',
         face: '#fdfbf4',
         ink: '#1e293b',
         accent: '#c0392b'
@@ -80,6 +94,7 @@ export const TILE_SETS: TileSetOption[] = [
         id: 'bakelite',
         name: 'Vintage Bakelite',
         description: 'Butterscotch heirloom',
+        artStyle: 'retro',
         face: '#e8b84b',
         ink: '#3d2b1f',
         accent: '#8e2f1c'
@@ -87,7 +102,8 @@ export const TILE_SETS: TileSetOption[] = [
     {
         id: 'jade',
         name: 'Imperial Jade',
-        description: 'Cool pale-green stone',
+        description: 'Carved jade stone',
+        artStyle: 'engraved',
         face: '#d7e8d4',
         ink: '#1c3a2a',
         accent: '#a02c2c'
@@ -95,7 +111,8 @@ export const TILE_SETS: TileSetOption[] = [
     {
         id: 'onyx',
         name: 'Onyx & Gold',
-        description: 'Black lacquer luxury',
+        description: 'Black lacquer & gold leaf',
+        artStyle: 'inlay',
         face: '#23252b',
         ink: '#e7d9ad',
         accent: '#e0b84e'
@@ -103,10 +120,29 @@ export const TILE_SETS: TileSetOption[] = [
     {
         id: 'rose',
         name: 'Rose Quartz',
-        description: 'Soft blush pink',
+        description: 'Delicate blush linework',
+        artStyle: 'linework',
         face: '#f7e2e4',
         ink: '#4a2530',
         accent: '#b03a52'
+    },
+    {
+        id: 'neon',
+        name: 'Neon Arcade',
+        description: 'Glowing cyber outlines',
+        artStyle: 'neon',
+        face: '#14131f',
+        ink: '#e9f7ff',
+        accent: '#ff3da6'
+    },
+    {
+        id: 'watercolor',
+        name: 'Watercolor Garden',
+        description: 'Soft painted washes',
+        artStyle: 'watercolor',
+        face: '#f9f6ef',
+        ink: '#3a4a52',
+        accent: '#c96a8e'
     }
 ];
 
