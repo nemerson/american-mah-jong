@@ -1,7 +1,11 @@
 import React, { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { MATS, TILE_SETS } from '../theme/themes';
-import type { ThemeSelection } from '../theme/themes';
+import type { ThemeSelection, TileSetOption } from '../theme/themes';
+import { TileStyleContext } from '../theme/TileStyleContext';
+import { TileFace } from './TileFace';
+import type { Tile } from '../types/mahjong';
+import './Tile.css'; // provides the [data-tiles] color variables the previews need
 import './SettingsPanel.css';
 
 interface SettingsPanelProps {
@@ -10,8 +14,46 @@ interface SettingsPanelProps {
     onTilesChange: (tiles: string) => void;
 }
 
+type Tab = 'tiles' | 'table';
+
+// Two representative tiles so the picker shows real artwork: a numbered
+// suit tile (pip art + corner index) and an honor (hero glyph). Together
+// they reveal how each set's art style + color treatment actually reads.
+const PREVIEW_TILES: Tile[] = [
+    { type: 'suit', suit: 'dots', value: 5, id: 'preview-5dot' },
+    { type: 'dragon', dragon: 'red', id: 'preview-red-dragon' },
+];
+
+// A real TileFace at swatch scale, wrapped so the set's [data-tiles] colors
+// AND its art-style treatment (neon glow, engraved bevel, gold inlay, …)
+// both apply — exactly what the player will see in play, just smaller.
+const TileSetPreview: React.FC<{ set: TileSetOption }> = ({ set }) => (
+    <span className="tile-preview" data-tiles={set.id} aria-hidden="true">
+        <TileStyleContext.Provider value={set.artStyle}>
+            {PREVIEW_TILES.map(tile => (
+                <span key={tile.id} className="preview-tile">
+                    <span className="preview-tile-face">
+                        <TileFace tile={tile} />
+                    </span>
+                    <span className="preview-tile-depth" />
+                </span>
+            ))}
+        </TileStyleContext.Provider>
+    </span>
+);
+
+// A mini felt swatch that applies the mat's [data-mat] variables. The felt
+// fill comes from --mat-center/--mat-edge and the embroidery from the same
+// --mat-motif layer the table paints in .game-board::after (see mat-preview
+// ::after in SettingsPanel.css), so "Year of the Horse" shows its fret rays
+// and sun disc rather than a flat red blob.
+const MatPreview: React.FC<{ matId: string }> = ({ matId }) => (
+    <span className="mat-preview" data-mat={matId} aria-hidden="true" />
+);
+
 export const SettingsPanel: React.FC<SettingsPanelProps> = ({ theme, onMatChange, onTilesChange }) => {
     const [open, setOpen] = useState(false);
+    const [tab, setTab] = useState<Tab>('tiles');
 
     return (
         <>
@@ -46,50 +88,62 @@ export const SettingsPanel: React.FC<SettingsPanelProps> = ({ theme, onMatChange
                             <button className="settings-close" onClick={() => setOpen(false)} aria-label="Close">✕</button>
                         </div>
 
-                        <div className="settings-section">
-                            <div className="settings-section-title">Table Mat</div>
-                            <div className="option-grid">
-                                {MATS.map(mat => (
-                                    <button
-                                        key={mat.id}
-                                        className={`option-card ${theme.mat === mat.id ? 'option-selected' : ''}`}
-                                        onClick={() => onMatChange(mat.id)}
-                                        aria-pressed={theme.mat === mat.id}
-                                    >
-                                        <span
-                                            className="mat-swatch"
-                                            style={{
-                                                background: `radial-gradient(circle at 35% 30%, ${mat.feltCenter}, ${mat.feltEdge})`,
-                                                borderColor: mat.rail
-                                            }}
-                                        />
-                                        <span className="option-name">{mat.name}</span>
-                                        <span className="option-desc">{mat.description}</span>
-                                    </button>
-                                ))}
-                            </div>
+                        <div className="settings-tabs" role="tablist" aria-label="Customization category">
+                            <button
+                                className={`settings-tab ${tab === 'tiles' ? 'settings-tab-active' : ''}`}
+                                role="tab"
+                                aria-selected={tab === 'tiles'}
+                                onClick={() => setTab('tiles')}
+                            >
+                                Tiles
+                            </button>
+                            <button
+                                className={`settings-tab ${tab === 'table' ? 'settings-tab-active' : ''}`}
+                                role="tab"
+                                aria-selected={tab === 'table'}
+                                onClick={() => setTab('table')}
+                            >
+                                Table
+                            </button>
                         </div>
 
-                        <div className="settings-section">
-                            <div className="settings-section-title">Tile Set</div>
-                            <div className="option-grid">
-                                {TILE_SETS.map(set => (
-                                    <button
-                                        key={set.id}
-                                        className={`option-card ${theme.tiles === set.id ? 'option-selected' : ''}`}
-                                        onClick={() => onTilesChange(set.id)}
-                                        aria-pressed={theme.tiles === set.id}
-                                    >
-                                        <span className="tile-swatch" style={{ background: set.face }}>
-                                            <span className="tile-swatch-glyph" style={{ color: set.accent }}>中</span>
-                                            <span className="tile-swatch-num" style={{ color: set.ink }}>5</span>
-                                        </span>
-                                        <span className="option-name">{set.name}</span>
-                                        <span className="option-desc">{set.description}</span>
-                                    </button>
-                                ))}
+                        {tab === 'tiles' && (
+                            <div className="settings-section" role="tabpanel" aria-label="Tile set">
+                                <div className="option-grid">
+                                    {TILE_SETS.map(set => (
+                                        <button
+                                            key={set.id}
+                                            className={`option-card ${theme.tiles === set.id ? 'option-selected' : ''}`}
+                                            onClick={() => onTilesChange(set.id)}
+                                            aria-pressed={theme.tiles === set.id}
+                                        >
+                                            <TileSetPreview set={set} />
+                                            <span className="option-name">{set.name}</span>
+                                            <span className="option-desc">{set.description}</span>
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
-                        </div>
+                        )}
+
+                        {tab === 'table' && (
+                            <div className="settings-section" role="tabpanel" aria-label="Table mat">
+                                <div className="option-grid">
+                                    {MATS.map(mat => (
+                                        <button
+                                            key={mat.id}
+                                            className={`option-card ${theme.mat === mat.id ? 'option-selected' : ''}`}
+                                            onClick={() => onMatChange(mat.id)}
+                                            aria-pressed={theme.mat === mat.id}
+                                        >
+                                            <MatPreview matId={mat.id} />
+                                            <span className="option-name">{mat.name}</span>
+                                            <span className="option-desc">{mat.description}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </motion.div>
                 )}
             </AnimatePresence>
