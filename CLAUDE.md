@@ -4,12 +4,13 @@ Guidance for Claude Code when working in this repository.
 
 ## Project
 
-American Mah Jong desktop game (single-player, with multiplayer in progress): React 19
-+ TypeScript + Vite, wrapped in Electron. The human plays against three bots using a
-custom card ("International Mahjong Card 2026 — Year of the Horse", 51 hands in
-9 sections) modeled on NMJL rules. A Socket.IO server (`server/`) and transport
-abstraction (`src/net/`) have been added for multiplayer; single-player still works
-in-process via `LocalTransport`.
+American Mah Jong desktop/web game: React 19 + TypeScript + Vite, wrapped in Electron
+for single-player and served via a Socket.IO server for LAN multiplayer. The human
+plays against three bots using a custom card ("International Mahjong Card 2026 — Year
+of the Horse", 51 hands in 9 sections) modeled on NMJL rules.
+
+**Status:** Phases 0–2 complete (decouple, LAN server, lobby + multi-human). Phase 3
+(internet play, reconnection) not started. See `BACKLOG.md` for next steps.
 
 ## Commands
 
@@ -19,22 +20,31 @@ npm run dev          # Vite + Electron in dev mode (window loads localhost:5173)
 npm run build        # tsc -b, vite build, then electron tsconfig build
 npm run package      # electron-packager Windows build into release-builds/
 
-# Multiplayer server
-npm run dev:server   # tsx watch server/index.ts (hot-reload, port 5174)
-npm run server       # tsx server/index.ts (production-style)
+# Multiplayer (browser)
+# Double-click start-server.bat  ← builds then serves; keeps URL on screen
+npm run server       # tsx server/index.ts (serves dist/ on port 5174)
+npm run dev:server   # tsx watch server/index.ts (hot-reload server only)
 npm run build:server # esbuild → dist-server/index.mjs
 
 # Quality
-npm test             # vitest run (engine + transport + server unit tests)
+npm test             # vitest run — 250 tests across 12 files
 npm run lint         # eslint — keep it at zero errors
 ```
 
+**Multiplayer workflow:** `start-server.bat` (double-click) runs `npm run build` then
+`npm run server`. The browser URL and LAN IP stay visible in the console. Always build
+before serving — the server serves `dist/` and won't reflect source changes otherwise.
+
 **Electron launch gotcha:** shells spawned by Claude Code inherit
-`ELECTRON_RUN_AS_NODE=1`, which makes `electron.exe` act as plain Node, so
-`require('electron')` returns a path string and `app` is undefined. Clear it first:
+`ELECTRON_RUN_AS_NODE=1`, which makes `electron.exe` act as plain Node. Clear it first:
 `Remove-Item Env:\ELECTRON_RUN_AS_NODE -ErrorAction SilentlyContinue; npm run dev`.
-Also kill stale node/electron processes first — a leftover Vite server on 5173 makes
-the new one silently move to 5174 while `electron/main.cts` hardcodes 5173.
+Also kill stale node/electron processes — a leftover Vite server on 5173 makes the new
+one silently move to 5174 while `electron/main.cts` hardcodes 5173.
+
+**Stale port cleanup:**
+```powershell
+Get-NetTCPConnection -LocalPort 5174 | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }
+```
 
 ## Workflow
 
@@ -57,7 +67,7 @@ the authority validates through the engine before applying. The UI never holds t
 Two concrete transports:
 
 - **`LocalTransport`** (`src/net/localTransport.ts`) — wraps a `GameSession` in-process.
-  This is what `GameBoard` uses today (single-player). No network involved.
+  Used by the Electron app (single-player). No network involved.
 - **`RemoteTransport`** (`src/net/remoteTransport.ts`) — talks to the authoritative
   server over Socket.IO. Selected at runtime when `window.__MAHJONG_REMOTE__ === true`
   (the server injects that flag into `index.html` when serving the web client).
@@ -72,34 +82,56 @@ server wrap a `GameSession`; rules and timing live in exactly one place.
 ### GameClock
 
 `src/engine/gameClock.ts` drives timed progression — auto-draw (600 ms), bot discard
-(1 s), and the call-window countdown. It is transport-agnostic (`getState`/`setState`
-callbacks) and runs wherever the authority lives: in the browser for single-player, on
-the server for multiplayer. It keys reschedules off `phase|turn|wall|discards` only, so
-cosmetic changes (hand reordering) never cancel pending timers.
+(1 s), and the call-window countdown. Transport-agnostic (`getState`/`setState`
+callbacks); runs in the browser for single-player and on the server for multiplayer.
+Keys reschedules off `phase|turn|wall|discards` only, so cosmetic changes never cancel
+pending timers.
 
 > `src/hooks/useGameLoop.ts` no longer exists — its logic was extracted into
 > `gameClock.ts` and `GameSession`.
 
 ### Engine modules (`src/engine/`)
 
-- `deck.ts` — 152-tile deck generation and shuffle
+- `deck.ts` — 152-tile deck; flowers tagged value 1–8 (Flowers 1–4, Seasons 5–8)
 - `game.ts` — init/deal, draw, discard, advanceTurn, reorder
 - `charleston.ts` — the six passes + courtesy pass
 - `calls.ts` — claiming discards into exposures, joker exchange, `resolveClaims`
-- `gameClock.ts` — timed authority-side progression (extracted from old useGameLoop)
+- `gameClock.ts` — timed authority-side progression
 - `handMatcher.ts` — card-hand spec schema + matching/scoring algorithms (card-agnostic)
 - `cardData.ts` — the 51 hands: display segments AND validation specs side by side
-- `rules.ts` — `checkMahJong` (validates 14 tiles against the card, returns the
-  matched hand + points), `getTileKey`, legacy `checkPattern`
-- `bot.ts` — card-aware decisions: every choice derives from `findBestTarget`
-  (best-fitting card hand for the bot's tiles)
+- `rules.ts` — `checkMahJong`, `getTileKey`, legacy `checkPattern`
+- `bot.ts` — card-aware decisions via `findBestTarget`
+
+### Visual / theme layer
+
+Tile and mat theming is split across CSS variables and a React context:
+
+- `src/theme/themes.ts` — `TILE_SETS` (7 sets) and `MATS` (7 mats); `useTheme` hook
+  persists selection to localStorage via `[data-tiles]` / `[data-mat]` on the app shell.
+- `src/theme/TileStyleContext.tsx` — React context that carries `TileArtStyle` from the
+  active set to `TileFace` without prop-drilling. Provided once in `App.tsx`.
+- `src/components/TileFace.tsx` — SVG tile art; artwork-driven (pips, bamboo canes,
+  Chinese numerals, compass-rose winds, etc.). Art style (neon glow, jade bevel, gold
+  inlay, watercolor wash, etc.) driven by `TileArtStyle` via SVG filters.
+- `src/components/Tile.css` — per-`[data-tiles]` color palettes.
+- `src/index.css` — per-`[data-mat]` felt variables + `--mat-motif` CSS patterns for
+  the embroidery layer rendered by `GameBoard.css::after`.
+
+**Tile sets (7):** Classic Ivory, Vintage Bakelite, Imperial Jade, Onyx & Gold, Rose
+Quartz, Neon Arcade, Watercolor Garden. Each has a distinct `artStyle` and tile back.
+
+**Mats (7):** Emerald Felt, Burgundy Club, Midnight Blue, Walnut Table, Pacific Teal,
+Year of the Horse, Art Deco Parlor. Each has a low-contrast felt motif layer.
+
+**FlowerTile.value** is now 1–8 (was 1–4 cycling). Values 1–4 render as four distinct
+flower blooms; 5–8 render as the four Seasons (Spring/Summer/Autumn/Winter). All 8
+remain rules-interchangeable.
 
 ### Server (`server/`)
 
-Express + Socket.IO authoritative game server. Listens on port 5174 (configurable via
-`PORT` env var). Serves the built client from `dist/` with the `__MAHJONG_REMOTE__`
-flag injected so browsers use `RemoteTransport`. The Electron app loads the same build
-from disk without the flag, staying single-player.
+Express + Socket.IO authoritative game server on port 5174 (configurable via `PORT`).
+Serves the built client from `dist/` with `__MAHJONG_REMOTE__` injected. Electron
+loads the same build without the flag, staying single-player.
 
 - `server/index.ts` — HTTP + Socket.IO setup, LAN URL logging
 - `server/lobby.ts` — connection handler; routes socket events to rooms
@@ -110,23 +142,18 @@ from disk without the flag, staying single-player.
 
 - `types.ts` — `GameTransport`, `PlayerView`, `PlayerSeatView`, `Intent`, `LobbyState`,
   `LobbyRequest`, `StartResult`
-- `gameSession.ts` — shared authority core (used by both LocalTransport and server)
+- `gameSession.ts` — shared authority core
 - `localTransport.ts` — in-process single-player transport
 - `remoteTransport.ts` — Socket.IO-backed multiplayer transport
-- `viewFor.ts` — strips `GameState` down to the `PlayerView` for a given seat
-- `createTransport.ts` — factory: returns `LocalTransport` or `RemoteTransport` based
-  on `window.__MAHJONG_REMOTE__`
+- `viewFor.ts` — strips `GameState` to per-seat `PlayerView` (hides opponent hands)
+- `createTransport.ts` — factory: `LocalTransport` or `RemoteTransport`
 
 ## Multiplayer progress
 
-Following `MULTIPLAYER_PLAN.md` phases:
-
-- **Phase 0 (decouple UI from engine)** — ✅ done. `GameTransport` interface,
-  `GameSession`, `LocalTransport`, `gameClock.ts` extraction, `viewFor`, Lobby UI.
-- **Phase 1 (server + LAN, 1 human + bots)** — ✅ done. `server/` running with
-  Socket.IO, `RemoteTransport`, room/lobby handling.
-- **Phase 2 (multiple humans, room codes, view filtering)** — in progress.
-- **Phase 3+ (internet play, reconnection, mobile layout)** — not started.
+- **Phase 0 (decouple UI from engine)** — ✅ done.
+- **Phase 1 (server + LAN, 1 human + bots)** — ✅ done.
+- **Phase 2 (multiple humans, room codes, view filtering)** — ✅ done.
+- **Phase 3+ (internet play, reconnection, mobile layout)** — not started. See `BACKLOG.md`.
 
 ## Card data invariants (cardData.ts)
 
@@ -149,8 +176,7 @@ parity; `soap` is the white dragon used as zero; dragons map to suits
 - Charleston: the second Charleston is optional — the human can stop it at the
   decision point (entry to secondLeft) via `stopCharleston`. On the 3rd and 6th
   passes a blind pass is allowed: pick 0-3 of your own tiles, the rest are taken
-  unseen from the incoming stack (they pass through without entering your hand).
-  Bots always pass 3 of their own and never blind-pass or stop the Charleston.
+  unseen from the incoming stack. Bots always pass 3 of their own and never blind-pass.
 - Calling: discard + 2 matching naturals minimum (or 1 natural + 1 joker); the call
   window gives the human exclusive priority (bots wait 6s of an 8s window) when they
   can use the tile, otherwise a quick 4s window with bots acting at 1.5s.
@@ -161,8 +187,8 @@ parity; `soap` is the white dragon used as zero; dragons map to suits
 
 Engine logic is thoroughly unit-tested (vitest). Test files live alongside the source:
 `src/engine/*.test.ts` covers the core engine; `src/net/*.test.ts` covers the transport
-layer (`gameSession`, `localTransport`); `server/room.test.ts` covers the server room.
-There are no component tests (no jsdom/testing-library installed).
+layer; `server/room.test.ts` covers the server room. No component tests (no
+jsdom/testing-library installed).
 
 When adding a card hand or matcher feature, extend the self-validating pattern in
 `cardData.test.ts` rather than writing one-off assertions.
