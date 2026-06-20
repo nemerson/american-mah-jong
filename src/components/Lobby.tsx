@@ -21,6 +21,11 @@ const SeatRow: React.FC<{
     <div className={`lobby-seat occupant-${seat.occupant}`}>
         <span className="seat-index">Seat {seat.index + 1}</span>
         <span className="seat-name">
+            {/* A "human" occupant means a live socket holds the seat, so the
+                green dot doubles as a connection indicator for human players. */}
+            {seat.occupant === 'human' && (
+                <span className="seat-conn-dot" title="Connected" aria-label="Connected" />
+            )}
             {seat.occupant === 'empty' ? '— empty —' : seat.name}
             {seat.isYou && ' (you)'}
             {seat.isEast && <span className="east-badge" title="Dealer (East)">East</span>}

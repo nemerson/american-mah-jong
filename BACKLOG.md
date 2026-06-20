@@ -35,7 +35,9 @@ These were scoped in `multiplayer_plan.md` but not yet started.
   - [x] Leave room / back button for the host — replaces the RemoteConnection
     (disconnecting frees the seat server-side via the existing disconnect
     handler) and returns to the Home screen.
-  - Per-seat connection indicator (connected dot for human seats)
+  - [x] Per-seat connection indicator (connected dot for human seats) — a live
+    pulsing green dot on seats whose occupant is `human` (a connected socket
+    holds the seat), in the waiting-room seat list.
 
 ### Mobile / responsive layout
 - Tile sizes are fixed px; opponent hands use `transform: rotate()`.

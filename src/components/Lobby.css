@@ -208,6 +208,31 @@
     font-weight: 500;
 }
 
+/* Connection indicator: a live green dot on seats held by a connected human. */
+.seat-conn-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    margin-right: 7px;
+    border-radius: 50%;
+    background: #4fc582;
+    box-shadow: 0 0 6px rgba(79, 197, 130, 0.85);
+    vertical-align: middle;
+    animation: seatConnPulse 2s ease-in-out infinite;
+}
+
+@keyframes seatConnPulse {
+
+    0%,
+    100% {
+        opacity: 0.6;
+    }
+
+    50% {
+        opacity: 1;
+    }
+}
+
 .east-badge {
     display: inline-block;
     margin-left: 8px;
