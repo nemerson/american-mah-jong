@@ -44,7 +44,7 @@ export class LocalTransport implements GameTransport {
     }
 
     private currentView(): PlayerView {
-        return viewFor(this.session.getState(), HUMAN_SEAT);
+        return viewFor(this.session.getState(), HUMAN_SEAT, this.session.getCallWindowRemainingMs());
     }
 
     private emit(): void {

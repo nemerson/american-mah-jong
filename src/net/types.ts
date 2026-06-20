@@ -34,6 +34,13 @@ export interface PlayerView {
     phase: GamePhase;
     charlestonPhase?: GameCharlestonPhase;
     winner?: WinInfo;
+    /**
+     * Remaining time (ms) on the current call-window countdown, present only
+     * during the `call` phase while the window is live. Drives a depleting
+     * ring/bar on the Call button. The authority (GameSession's GameClock) owns
+     * the real countdown, so this is correct in single-player and multiplayer.
+     */
+    callWindowMs?: number;
 }
 
 /**

@@ -47,6 +47,33 @@ describe('gameClock', () => {
         clock.stop();
     });
 
+    it('reports the call-window countdown while it runs, then clears it', () => {
+        vi.useFakeTimers();
+        vi.setSystemTime(0);
+        const base = initializeGame(['You', 'B1', 'B2', 'B3']);
+        let state: GameState = { ...base, phase: 'call', currentPlayerIndex: 1 };
+        const clock = createGameClock({
+            getState: () => state,
+            setState: (next) => { state = next; clock.onStateChanged(); },
+            getCallWindowMs: () => 8000,
+        });
+
+        // No window before start.
+        expect(clock.callWindowRemainingMs()).toBeUndefined();
+
+        clock.start();
+        expect(clock.callWindowRemainingMs()).toBe(8000);
+
+        vi.advanceTimersByTime(3000);
+        expect(clock.callWindowRemainingMs()).toBe(5000);
+
+        // Once the window elapses and the legacy fallback resolves it, the
+        // countdown is gone.
+        vi.advanceTimersByTime(5000);
+        expect(clock.callWindowRemainingMs()).toBeUndefined();
+        clock.stop();
+    });
+
     it('schedules nothing while stopped (paused)', () => {
         vi.useFakeTimers();
         const base = initializeGame(['You', 'B1', 'B2', 'B3']);

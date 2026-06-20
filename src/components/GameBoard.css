@@ -322,6 +322,38 @@
     }
 }
 
+/* Call-window countdown: a gold bar pinned under the Call button that depletes
+   left-to-right over the remaining window. The wrapper only exists to position
+   the bar against the button; it stays inline like a plain button slot. */
+.call-btn-wrap {
+    position: relative;
+    display: inline-flex;
+}
+
+.call-countdown {
+    position: absolute;
+    left: 8px;
+    right: 8px;
+    bottom: 4px;
+    height: 3px;
+    border-radius: 2px;
+    background: var(--accent-gold);
+    transform-origin: left center;
+    pointer-events: none;
+    animation: callCountdownDeplete linear forwards;
+    box-shadow: 0 0 6px rgba(212, 175, 55, 0.7);
+}
+
+@keyframes callCountdownDeplete {
+    from {
+        transform: scaleX(1);
+    }
+
+    to {
+        transform: scaleX(0);
+    }
+}
+
 .action-btn.primary-btn {
     background: linear-gradient(180deg, #e8c764, #c49a2e);
     border-color: #f0d98a;

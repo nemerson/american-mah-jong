@@ -13,13 +13,17 @@ These were scoped in `multiplayer_plan.md` but not yet started.
 - **Reconnection** — session tokens so a disconnected player can rejoin their seat
   mid-game. `server/room.ts` already holds the seat without bot takeover on disconnect;
   needs the token handshake and `RemoteTransport` reconnect logic.
-- **Synced countdown UI** — expose remaining call-window ms in `PlayerView` so the
-  client can render a depleting ring/bar on the Call button. Requires a small
-  `PlayerView` addition and a `viewFor.ts` change to include `callWindowMs?`.
+- [x] **Synced countdown UI** — expose remaining call-window ms in `PlayerView` so the
+  client can render a depleting ring/bar on the Call button. Done: `GameClock`
+  tracks the call-window deadline (`callWindowRemainingMs()`), `GameSession`
+  forwards it, and `viewFor(state, seat, callWindowMs?)` threads it into
+  `PlayerView.callWindowMs`. Works in all three modes (clock runs in-browser for
+  single-player, on the server for LAN/internet).
 
 ### UX improvements (from UI/UX review — not yet implemented)
-- **Call window countdown timer** — depleting visual on the Call button during the
-  8-second window. Blocked on `callWindowMs?` in `PlayerView` above.
+- [x] **Call window countdown timer** — depleting gold bar under the Call button,
+  driven by `view.callWindowMs` (CSS depletion animation keyed per discard, so a
+  new discard restarts it). Respects `prefers-reduced-motion`.
 - **Joker swap discoverability** — badge/glow on an exposed joker when your hand
   contains the natural tile that could swap it. Currently only the Swap button appears
   after you select the right tile.

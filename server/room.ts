@@ -157,7 +157,7 @@ export class GameRoom {
         const seat = this.seatOf(socket);
         if (seat === -1) return;
         if (this.started && this.session) {
-            socket.emit('view', viewFor(this.session.getState(), seat));
+            socket.emit('view', viewFor(this.session.getState(), seat, this.session.getCallWindowRemainingMs()));
         } else {
             socket.emit('lobby', this.lobbyStateFor(seat));
         }
@@ -172,8 +172,9 @@ export class GameRoom {
     private broadcastGame(): void {
         if (!this.session) return;
         const state = this.session.getState();
+        const callWindowMs = this.session.getCallWindowRemainingMs();
         for (const s of this.seats) {
-            if (s.socket) s.socket.emit('view', viewFor(state, this.seatOf(s.socket)));
+            if (s.socket) s.socket.emit('view', viewFor(state, this.seatOf(s.socket), callWindowMs));
         }
     }
 

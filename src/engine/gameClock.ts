@@ -46,6 +46,12 @@ export interface GameClock {
     start(): void;
     /** Freeze the clock: clear pending timers and stop scheduling. */
     stop(): void;
+    /**
+     * Remaining time (ms) on the current call-window countdown, or `undefined`
+     * when no call window is running. Lets the authority surface the countdown
+     * to clients so the UI can render a depleting ring on the Call button.
+     */
+    callWindowRemainingMs(): number | undefined;
 }
 
 const progressKey = (s: GameState) =>
@@ -60,10 +66,15 @@ export function createGameClock(deps: GameClockDeps): GameClock {
     let timeoutId: ReturnType<typeof setTimeout> | undefined;
     let stopped = true;
     let lastKey = '';
+    // Absolute time (ms, Date.now epoch) the active call window elapses, or
+    // undefined when no call window is running. Used to report the remaining
+    // countdown without a separate ticking timer.
+    let callDeadline: number | undefined;
 
     const clear = () => {
         clearTimeout(timeoutId);
         timeoutId = undefined;
+        callDeadline = undefined;
     };
 
     const schedule = () => {
@@ -100,6 +111,7 @@ export function createGameClock(deps: GameClockDeps): GameClock {
             // The authority owns claim collection; the clock just runs the
             // window and asks it to resolve when the countdown elapses.
             const windowMs = getCallWindowMs ? getCallWindowMs() : DEFAULT_CALL_WINDOW_MS;
+            callDeadline = Date.now() + windowMs;
             timeoutId = setTimeout(() => {
                 const s = getState();
                 if (s.phase !== 'call') return;
@@ -129,6 +141,10 @@ export function createGameClock(deps: GameClockDeps): GameClock {
         stop() {
             stopped = true;
             clear();
+        },
+        callWindowRemainingMs() {
+            if (callDeadline === undefined) return undefined;
+            return Math.max(0, callDeadline - Date.now());
         },
     };
 }

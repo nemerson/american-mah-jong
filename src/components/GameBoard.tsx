@@ -161,6 +161,15 @@ export const GameBoard: React.FC<GameBoardProps> = ({ transport: injected }) => 
         ? view.discards[view.discards.length - 1]
         : null;
 
+    // Call-window countdown ring. The authority reports the remaining ms in the
+    // view; we drive a CSS depletion animation whose duration is that remaining
+    // time. The window's identity is the discard it opened on, so a fresh
+    // discard restarts the animation (via the React key) rather than letting it
+    // resume mid-deplete. `prefers-reduced-motion` neutralizes the animation
+    // globally, leaving a static (non-distracting) button.
+    const callWindowMs = view.phase === 'call' ? view.callWindowMs : undefined;
+    const showCallCountdown = callWindowMs !== undefined && callWindowMs > 0;
+
     // The human may call when someone else discarded and the tiles in hand
     // can legally join the discard as an exposure
     const canHumanCall = view.phase === 'call'
@@ -429,16 +438,26 @@ export const GameBoard: React.FC<GameBoardProps> = ({ transport: injected }) => 
                             >
                                 Discard Selected
                             </button>
-                            <button
-                                className={`action-btn ${canHumanCall ? 'call-ready' : ''}`}
-                                disabled={!canHumanCall}
-                                onClick={handleCall}
-                                title={view.phase === 'call' && !canHumanCall
-                                    ? 'You need two matching tiles in hand (or one plus a joker) to call'
-                                    : undefined}
-                            >
-                                Call Discard
-                            </button>
+                            <div className="call-btn-wrap">
+                                <button
+                                    className={`action-btn ${canHumanCall ? 'call-ready' : ''}`}
+                                    disabled={!canHumanCall}
+                                    onClick={handleCall}
+                                    title={view.phase === 'call' && !canHumanCall
+                                        ? 'You need two matching tiles in hand (or one plus a joker) to call'
+                                        : undefined}
+                                >
+                                    Call Discard
+                                </button>
+                                {showCallCountdown && (
+                                    <span
+                                        key={`call-${view.discards.length}`}
+                                        className="call-countdown"
+                                        style={{ animationDuration: `${callWindowMs}ms` }}
+                                        aria-hidden="true"
+                                    />
+                                )}
+                            </div>
                             <button
                                 className="action-btn"
                                 style={{ visibility: view.phase === 'call' ? 'visible' : 'hidden' }}

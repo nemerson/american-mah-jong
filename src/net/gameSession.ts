@@ -85,6 +85,16 @@ export class GameSession {
         return this.state;
     }
 
+    /**
+     * Remaining time (ms) on the live call-window countdown, or `undefined`
+     * when no call window is running. Forwarded into `viewFor` so each seat's
+     * view can drive a depleting Call-button ring; identical in single-player
+     * (clock in-browser) and multiplayer (clock on the server).
+     */
+    getCallWindowRemainingMs(): number | undefined {
+        return this.clock.callWindowRemainingMs();
+    }
+
     /** Subscribe to state changes; returns an unsubscribe fn. */
     onChange(cb: () => void): () => void {
         this.listeners.add(cb);
