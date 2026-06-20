@@ -41,7 +41,10 @@ const SeatRow: React.FC<{
 
 export const Lobby: React.FC = () => {
     const choice = useMemo(() => detectRemote(), []);
-    const [connection] = useState(() => new RemoteConnection(choice.url));
+    // The connection is replaceable: leaving a room disconnects the current
+    // socket (the server frees the seat on disconnect) and spins up a fresh
+    // one, dropping the client back to the Home screen.
+    const [connection, setConnection] = useState(() => new RemoteConnection(choice.url));
     const [lobby, setLobby] = useState<LobbyState | null>(null);
     const [name, setName] = useState('');
     const [joinCode, setJoinCode] = useState('');
@@ -108,6 +111,16 @@ export const Lobby: React.FC = () => {
     // Waiting room.
     const allFilled = lobby.seats.every(s => s.occupant !== 'empty');
 
+    // Leave the room: replacing the connection triggers the unmount effect's
+    // cleanup on the old one (disconnecting the socket, which frees the seat
+    // server-side), and the null lobby drops us back to the Home screen.
+    const leaveRoom = () => {
+        setConnection(new RemoteConnection(choice.url));
+        setLobby(null);
+        setError(null);
+        setCopied(false);
+    };
+
     const copyCode = async () => {
         try {
             await navigator.clipboard.writeText(lobby.code);
@@ -121,7 +134,16 @@ export const Lobby: React.FC = () => {
     return (
         <div className="lobby-shell">
             <div className="lobby-card wide">
-                <h1 className="lobby-title">Waiting room</h1>
+                <div className="lobby-header-row">
+                    <h1 className="lobby-title">Waiting room</h1>
+                    <button
+                        className="lobby-btn small ghost lobby-leave-btn"
+                        onClick={leaveRoom}
+                        title="Leave this room and return to the start screen"
+                    >
+                        ← Leave room
+                    </button>
+                </div>
                 <p className="lobby-subtitle">
                     Share this code so others can join:
                     <span className="lobby-code-display">{lobby.code}</span>

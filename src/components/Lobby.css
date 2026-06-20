@@ -135,6 +135,23 @@
     color: #ffe9a8;
 }
 
+.lobby-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 2px;
+}
+
+.lobby-header-row .lobby-title {
+    margin: 0;
+}
+
+.lobby-leave-btn {
+    flex: 0 0 auto;
+    white-space: nowrap;
+}
+
 .lobby-copy-btn {
     appearance: none;
     margin-left: 8px;

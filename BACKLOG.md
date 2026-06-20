@@ -32,7 +32,9 @@ These were scoped in `multiplayer_plan.md` but not yet started.
   - [x] Copy-to-clipboard button on the join code chip (`.lobby-code-display`)
     — `navigator.clipboard` with a "✓ Copied" confirmation; soft-fails on
     insecure origins (code stays visible).
-  - Leave room / back button for the host
+  - [x] Leave room / back button for the host — replaces the RemoteConnection
+    (disconnecting frees the seat server-side via the existing disconnect
+    handler) and returns to the Home screen.
   - Per-seat connection indicator (connected dot for human seats)
 
 ### Mobile / responsive layout
