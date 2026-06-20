@@ -427,6 +427,47 @@
     margin: -6px;
 }
 
+/* Joker-swap discoverability: an exposed joker the player can swap (they hold
+   the matching natural) gets a gold glow + a swap badge, so the move is
+   visible before any tile is selected. */
+.exposure-tile-wrapper.joker-swappable {
+    position: relative;
+    border-radius: 8px;
+    box-shadow: 0 0 0 2px var(--accent-gold), 0 0 14px rgba(212, 175, 55, 0.85);
+    animation: jokerSwapGlow 1.4s ease-in-out infinite;
+}
+
+.joker-swap-badge {
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--accent-gold);
+    color: #2b1f06;
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+    pointer-events: none;
+}
+
+@keyframes jokerSwapGlow {
+
+    0%,
+    100% {
+        box-shadow: 0 0 0 2px var(--accent-gold), 0 0 8px rgba(212, 175, 55, 0.5);
+    }
+
+    50% {
+        box-shadow: 0 0 0 2px var(--accent-gold), 0 0 18px rgba(212, 175, 55, 0.95);
+    }
+}
+
 .end-overlay {
     position: fixed;
     inset: 0;

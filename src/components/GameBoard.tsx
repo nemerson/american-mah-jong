@@ -10,24 +10,51 @@ import { MahJongTile } from './Tile';
 import { WinningHandsReference } from './WinningHandsReference';
 import './GameBoard.css';
 
-const ExposureDisplay: React.FC<{ exposures: Tile[][] }> = ({ exposures }) => {
+const ExposureDisplay: React.FC<{
+    exposures: Tile[][];
+    /**
+     * Indices of exposures (within this seat) that hold a joker the viewing
+     * player could swap right now — they have the matching natural tile in
+     * hand. The joker tile in those exposures gets a badge/glow so the swap is
+     * discoverable before any tile is selected.
+     */
+    swappableExposureIndices?: Set<number>;
+}> = ({ exposures, swappableExposureIndices }) => {
     if (exposures.length === 0) return null;
     return (
         <div className="exposures-row">
-            {exposures.map((exposure, i) => (
-                <div key={i} className="exposure-group">
-                    {exposure.map(tile => (
-                        <div key={tile.id} className="exposure-tile-wrapper">
-                            <MahJongTile tile={tile} />
-                        </div>
-                    ))}
-                </div>
-            ))}
+            {exposures.map((exposure, i) => {
+                const swappable = swappableExposureIndices?.has(i) ?? false;
+                return (
+                    <div key={i} className="exposure-group">
+                        {exposure.map(tile => {
+                            const isSwappableJoker = swappable && tile.type === 'joker';
+                            return (
+                                <div
+                                    key={tile.id}
+                                    className={`exposure-tile-wrapper${isSwappableJoker ? ' joker-swappable' : ''}`}
+                                    title={isSwappableJoker
+                                        ? 'You hold the natural tile for this joker — select it to swap'
+                                        : undefined}
+                                >
+                                    <MahJongTile tile={tile} />
+                                    {isSwappableJoker && <span className="joker-swap-badge" aria-hidden="true">⇄</span>}
+                                </div>
+                            );
+                        })}
+                    </div>
+                );
+            })}
         </div>
     );
 };
 
-const OpponentColumn: React.FC<{ seat: PlayerSeatView; side: 'left' | 'right'; isActive: boolean }> = ({ seat, side, isActive }) => (
+const OpponentColumn: React.FC<{
+    seat: PlayerSeatView;
+    side: 'left' | 'right';
+    isActive: boolean;
+    swappableExposureIndices?: Set<number>;
+}> = ({ seat, side, isActive, swappableExposureIndices }) => (
     <div className={`opponent-${side}${isActive ? ' is-active-seat' : ''}`}>
         <div className={`player-label${isActive ? ' is-active' : ''}`}>{seat.name}</div>
         <div className="vertical-hand" role="img" aria-label={`${seat.handCount} face-down tiles`}>
@@ -35,7 +62,7 @@ const OpponentColumn: React.FC<{ seat: PlayerSeatView; side: 'left' | 'right'; i
                 <div key={i} className="mini-tile-back" />
             ))}
         </div>
-        <ExposureDisplay exposures={seat.exposures} />
+        <ExposureDisplay exposures={seat.exposures} swappableExposureIndices={swappableExposureIndices} />
     </div>
 );
 
@@ -206,6 +233,27 @@ export const GameBoard: React.FC<GameBoardProps> = ({ transport: injected }) => 
         ? findExposedJokersInView(view).find(j => j.key === getTileKey(selectedTile))
         : undefined;
 
+    // Joker-swap discoverability: independent of any selection, find every
+    // exposed joker the human could swap right now — they hold the matching
+    // natural in hand and it's their turn to discard. Group by owner seat so
+    // each ExposureDisplay can badge the right joker. The actual swap still
+    // happens by selecting that natural tile and pressing Swap.
+    const canSwapJokerNow = view.phase === 'discard' && view.currentPlayerIndex === view.mySeat;
+    const swappableJokersByOwner = ((): Map<number, Set<number>> => {
+        const byOwner = new Map<number, Set<number>>();
+        if (!canSwapJokerNow) return byOwner;
+        const myNaturalKeys = new Set(
+            myHand.filter(t => t.type !== 'joker').map(t => getTileKey(t)),
+        );
+        for (const j of findExposedJokersInView(view)) {
+            if (!myNaturalKeys.has(j.key)) continue;
+            const set = byOwner.get(j.ownerIndex) ?? new Set<number>();
+            set.add(j.exposureIndex);
+            byOwner.set(j.ownerIndex, set);
+        }
+        return byOwner;
+    })();
+
     const handleJokerSwap = () => {
         if (!jokerSwapTarget || !selectedTile) return;
         transport.send({
@@ -321,12 +369,20 @@ export const GameBoard: React.FC<GameBoardProps> = ({ transport: injected }) => 
             <div className={`opponent-across${isAcrossActive ? ' is-active-seat' : ''}`}>
                 <div className={`player-label${isAcrossActive ? ' is-active' : ''}`}>{acrossSeat.name}</div>
                 <PlayerHand count={acrossSeat.handCount} />
-                <ExposureDisplay exposures={acrossSeat.exposures} />
+                <ExposureDisplay
+                    exposures={acrossSeat.exposures}
+                    swappableExposureIndices={swappableJokersByOwner.get((view.mySeat + 2) % 4)}
+                />
             </div>
 
             {/* Middle Area: Left/Right Opponents + Discard Center */}
             <div className="middle-section">
-                <OpponentColumn seat={leftSeat} side="left" isActive={isLeftActive} />
+                <OpponentColumn
+                    seat={leftSeat}
+                    side="left"
+                    isActive={isLeftActive}
+                    swappableExposureIndices={swappableJokersByOwner.get((view.mySeat + 3) % 4)}
+                />
 
                 <div className="center-table">
                     <div className={`phase-indicator title-glow${isMyActiveTurn ? ' is-my-turn' : ''}`}>
@@ -359,7 +415,12 @@ export const GameBoard: React.FC<GameBoardProps> = ({ transport: injected }) => 
                     </div>
                 </div>
 
-                <OpponentColumn seat={rightSeat} side="right" isActive={isRightActive} />
+                <OpponentColumn
+                    seat={rightSeat}
+                    side="right"
+                    isActive={isRightActive}
+                    swappableExposureIndices={swappableJokersByOwner.get((view.mySeat + 1) % 4)}
+                />
             </div>
 
             {/* Status Message */}
@@ -402,7 +463,10 @@ export const GameBoard: React.FC<GameBoardProps> = ({ transport: injected }) => 
             {/* Bottom Area: Human Player */}
             <div className={`human-player-area${isMyActiveTurn ? ' is-active-seat' : ''}`}>
                 <WinningHandsReference />
-                <ExposureDisplay exposures={humanPlayer.exposures} />
+                <ExposureDisplay
+                    exposures={humanPlayer.exposures}
+                    swappableExposureIndices={swappableJokersByOwner.get(view.mySeat)}
+                />
                 <div className="tile-count">Your tiles: {humanPlayer.hand.length}</div>
                 <div className="player-actions">
                     {view.phase === 'charleston' ? (

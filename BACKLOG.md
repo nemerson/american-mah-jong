@@ -24,9 +24,10 @@ These were scoped in `multiplayer_plan.md` but not yet started.
 - [x] **Call window countdown timer** — depleting gold bar under the Call button,
   driven by `view.callWindowMs` (CSS depletion animation keyed per discard, so a
   new discard restarts it). Respects `prefers-reduced-motion`.
-- **Joker swap discoverability** — badge/glow on an exposed joker when your hand
-  contains the natural tile that could swap it. Currently only the Swap button appears
-  after you select the right tile.
+- [x] **Joker swap discoverability** — exposed jokers the player can swap (they
+  hold the matching natural and it's their discard turn) now get a gold glow +
+  ⇄ badge, computed independent of selection across all four seats' exposures.
+  The Swap button still completes the move once the natural is selected.
 - **Lobby quality-of-life:**
   - Copy-to-clipboard button on the join code chip (`.lobby-code-display`)
   - Leave room / back button for the host
