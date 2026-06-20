@@ -135,6 +135,25 @@
     color: #ffe9a8;
 }
 
+.lobby-copy-btn {
+    appearance: none;
+    margin-left: 8px;
+    padding: 3px 10px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    background: rgba(255, 255, 255, 0.08);
+    color: #eef4ee;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    vertical-align: middle;
+    transition: background 0.15s ease;
+}
+
+.lobby-copy-btn:hover {
+    background: rgba(255, 255, 255, 0.16);
+}
+
 .lobby-seats {
     display: flex;
     flex-direction: column;

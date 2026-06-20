@@ -29,7 +29,9 @@ These were scoped in `multiplayer_plan.md` but not yet started.
   ⇄ badge, computed independent of selection across all four seats' exposures.
   The Swap button still completes the move once the natural is selected.
 - **Lobby quality-of-life:**
-  - Copy-to-clipboard button on the join code chip (`.lobby-code-display`)
+  - [x] Copy-to-clipboard button on the join code chip (`.lobby-code-display`)
+    — `navigator.clipboard` with a "✓ Copied" confirmation; soft-fails on
+    insecure origins (code stays visible).
   - Leave room / back button for the host
   - Per-seat connection indicator (connected dot for human seats)
 

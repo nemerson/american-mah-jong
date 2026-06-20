@@ -46,6 +46,7 @@ export const Lobby: React.FC = () => {
     const [name, setName] = useState('');
     const [joinCode, setJoinCode] = useState('');
     const [error, setError] = useState<string | null>(null);
+    const [copied, setCopied] = useState(false);
 
     useEffect(() => {
         const offLobby = connection.onLobby(setLobby);
@@ -106,6 +107,17 @@ export const Lobby: React.FC = () => {
 
     // Waiting room.
     const allFilled = lobby.seats.every(s => s.occupant !== 'empty');
+
+    const copyCode = async () => {
+        try {
+            await navigator.clipboard.writeText(lobby.code);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1500);
+        } catch {
+            // Clipboard can be blocked (insecure origin / denied permission);
+            // the code stays visible on screen, so this is a soft failure.
+        }
+    };
     return (
         <div className="lobby-shell">
             <div className="lobby-card wide">
@@ -113,6 +125,14 @@ export const Lobby: React.FC = () => {
                 <p className="lobby-subtitle">
                     Share this code so others can join:
                     <span className="lobby-code-display">{lobby.code}</span>
+                    <button
+                        className="lobby-copy-btn"
+                        onClick={copyCode}
+                        title="Copy join code to clipboard"
+                        aria-label={copied ? 'Join code copied' : 'Copy join code'}
+                    >
+                        {copied ? '✓ Copied' : 'Copy'}
+                    </button>
                 </p>
                 <div className="lobby-seats">
                     {lobby.seats.map(seat => (
