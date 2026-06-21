@@ -2,6 +2,22 @@
 
 Pending work ordered roughly by priority. See `CLAUDE.md` for architecture context.
 
+## Bugs
+
+- [ ] **Dev-mode single-player stalls after the first Charleston pass** — under
+  `npm run dev` (Vite dev build), single-player freezes after the human's first
+  Charleston pass: the pass intent fires (selection clears) but game state never
+  advances. The production build does the identical sequence flawlessly, so the
+  shipped/packaged Electron app and the server are unaffected — but dev Electron
+  loads the dev server, so local single-player development may be broken. Suspected
+  cause: React **StrictMode** double-mount runs `GameBoard`'s effect cleanup →
+  `transport.dispose()` (which `clock.stop()`s the in-process `GameSession`) during
+  the simulated remount, leaving the clock stopped. Appears **pre-existing** (the
+  Phase 3 polish commits don't touch the Charleston/transport-dispose path), not a
+  regression. Found during runtime verification of the call-window/joker features
+  (prod build at `vite preview` worked; dev build at `vite` reproduced the stall,
+  including via a direct single-pass test). Root cause not yet confirmed.
+
 ## Phase 3 — Internet play & polish
 
 These were scoped in `multiplayer_plan.md` but not yet started.
