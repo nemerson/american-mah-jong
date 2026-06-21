@@ -12,13 +12,25 @@ const HUMAN_SEAT = 0;
 export class LocalTransport implements GameTransport {
     private session = new GameSession();
     private subscribers = new Set<(view: PlayerView) => void>();
-    private unsubscribeSession: () => void;
+    // The session→UI link. Null once `dispose()` has severed it; re-armed by the
+    // next `subscribe()` so the transport survives a teardown-then-resubscribe
+    // (e.g. React StrictMode's dev double-mount, which reuses this instance).
+    private unsubscribeSession: (() => void) | null = null;
 
     constructor() {
+        this.connect();
+    }
+
+    // Idempotently (re)attach the session listener and ensure its clock is
+    // running. Safe to call on a fresh instance or after a dispose.
+    private connect(): void {
+        if (this.unsubscribeSession) return;
         this.unsubscribeSession = this.session.onChange(() => this.emit());
+        this.session.resume();
     }
 
     subscribe(cb: (view: PlayerView) => void): () => void {
+        this.connect(); // re-arm if a prior dispose() severed the session link
         this.subscribers.add(cb);
         cb(this.currentView()); // deliver current view immediately
         return () => { this.subscribers.delete(cb); };
@@ -38,7 +50,8 @@ export class LocalTransport implements GameTransport {
     }
 
     dispose(): void {
-        this.unsubscribeSession();
+        this.unsubscribeSession?.();
+        this.unsubscribeSession = null;
         this.session.dispose();
         this.subscribers.clear();
     }

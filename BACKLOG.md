@@ -4,19 +4,21 @@ Pending work ordered roughly by priority. See `CLAUDE.md` for architecture conte
 
 ## Bugs
 
-- [ ] **Dev-mode single-player stalls after the first Charleston pass** — under
-  `npm run dev` (Vite dev build), single-player freezes after the human's first
-  Charleston pass: the pass intent fires (selection clears) but game state never
-  advances. The production build does the identical sequence flawlessly, so the
-  shipped/packaged Electron app and the server are unaffected — but dev Electron
-  loads the dev server, so local single-player development may be broken. Suspected
-  cause: React **StrictMode** double-mount runs `GameBoard`'s effect cleanup →
-  `transport.dispose()` (which `clock.stop()`s the in-process `GameSession`) during
-  the simulated remount, leaving the clock stopped. Appears **pre-existing** (the
-  Phase 3 polish commits don't touch the Charleston/transport-dispose path), not a
-  regression. Found during runtime verification of the call-window/joker features
-  (prod build at `vite preview` worked; dev build at `vite` reproduced the stall,
-  including via a direct single-pass test). Root cause not yet confirmed.
+- [x] **Dev-mode single-player stalled after the first Charleston pass** — under
+  `npm run dev`, single-player froze after the human's first Charleston pass (the
+  intent fired and state advanced internally, but no view was ever emitted, so the
+  UI stayed frozen). **Root cause:** `LocalTransport` established its session→UI
+  link (`session.onChange`) once in the constructor; React **StrictMode**'s dev
+  double-mount (setup → cleanup → setup) ran `GameBoard`'s cleanup → `dispose()`,
+  which severed that link permanently and stopped the clock, and the re-subscribe
+  on remount never re-armed either. **Fix:** `LocalTransport.subscribe()` now
+  re-arms the session link via an idempotent `connect()`, and `GameSession.resume()`
+  restarts the clock; `dispose()` nulls the link so `connect()` knows to rebuild it.
+  Idempotent — production (no double-invoke) behaviour is unchanged. Regression test
+  in `localTransport.test.ts` (dispose → resubscribe → intent still advances the
+  view). `RemoteTransport` was checked and is unaffected (its socket listener
+  outlives `dispose()`, which only clears subscribers). Verified at runtime: the
+  StrictMode dev build now drives Charleston → play.
 
 ## Phase 3 — Internet play & polish
 

@@ -106,6 +106,15 @@ export class GameSession {
         else this.clock.start();
     }
 
+    // Restart the clock after a dispose(). Idempotent: clock.start() clears any
+    // pending timer and reschedules for the current state, so calling it on an
+    // already-running clock is a no-op-by-reschedule. Lets a transport that was
+    // torn down and re-subscribed (e.g. a StrictMode dev remount) resume timed
+    // progression instead of staying frozen.
+    resume(): void {
+        this.clock.start();
+    }
+
     dispose(): void {
         this.clock.stop();
         this.listeners.clear();

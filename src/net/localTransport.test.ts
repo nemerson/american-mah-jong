@@ -41,6 +41,30 @@ describe('LocalTransport', () => {
         t.dispose();
     });
 
+    it('keeps delivering views after a dispose-then-resubscribe (StrictMode remount)', () => {
+        // React StrictMode dev double-mounts: setup -> cleanup -> setup, reusing
+        // the same transport instance. The cleanup disposes it; the second setup
+        // re-subscribes. Without re-arming the session link this left the UI
+        // frozen — intents mutated state internally but no view was ever emitted.
+        const t = new LocalTransport();
+        const unsub = t.subscribe(() => {});
+        unsub();
+        t.dispose(); // StrictMode cleanup severs the session link + stops the clock
+
+        let view!: PlayerView;
+        t.subscribe(v => { view = v; }); // StrictMode second setup re-subscribes
+
+        expect(view).toBeDefined();
+        expect(view.charlestonPhase).toBe('firstRight');
+        const threeOwnTiles = view.seats[0].hand!.slice(0, 3).map(tile => tile.id);
+
+        t.send({ type: 'charlestonPass', tileIds: threeOwnTiles });
+
+        // The re-armed link must emit the advanced view — not stay frozen.
+        expect(view.charlestonPhase).toBe('firstAcross');
+        t.dispose();
+    });
+
     it('ignores an illegal intent without throwing or changing state', () => {
         const t = new LocalTransport();
         let view!: PlayerView;
