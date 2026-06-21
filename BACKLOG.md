@@ -2,62 +2,23 @@
 
 Pending work ordered roughly by priority. See `CLAUDE.md` for architecture context.
 
-## Bugs
+## Phase 3 — Internet play
 
-- [x] **Dev-mode single-player stalled after the first Charleston pass** — under
-  `npm run dev`, single-player froze after the human's first Charleston pass (the
-  intent fired and state advanced internally, but no view was ever emitted, so the
-  UI stayed frozen). **Root cause:** `LocalTransport` established its session→UI
-  link (`session.onChange`) once in the constructor; React **StrictMode**'s dev
-  double-mount (setup → cleanup → setup) ran `GameBoard`'s cleanup → `dispose()`,
-  which severed that link permanently and stopped the clock, and the re-subscribe
-  on remount never re-armed either. **Fix:** `LocalTransport.subscribe()` now
-  re-arms the session link via an idempotent `connect()`, and `GameSession.resume()`
-  restarts the clock; `dispose()` nulls the link so `connect()` knows to rebuild it.
-  Idempotent — production (no double-invoke) behaviour is unchanged. Regression test
-  in `localTransport.test.ts` (dispose → resubscribe → intent still advances the
-  view). `RemoteTransport` was checked and is unaffected (its socket listener
-  outlives `dispose()`, which only clears subscribers). Verified at runtime: the
-  StrictMode dev build now drives Charleston → play.
+The Phase 3 **polish track** (countdown UI, joker discoverability, lobby QoL) is
+done — see Completed below. What remains is actual internet play. Scoped in
+`multiplayer_plan.md`.
 
-## Phase 3 — Internet play & polish
-
-These were scoped in `multiplayer_plan.md` but not yet started.
-
-### Internet connectivity (Phase 3 network)
+### Internet connectivity (next up)
 - **Tunnel support** — expose the local server over the internet via Tailscale or
   ngrok. Server already reads `HOST`/`PORT`/`CORS_ORIGIN` env vars; no code changes
-  needed beyond documenting the tunnel setup.
+  needed beyond documenting the tunnel setup. Cheapest win — gets remote players
+  connecting.
 - **Reconnection** — session tokens so a disconnected player can rejoin their seat
   mid-game. `server/room.ts` already holds the seat without bot takeover on disconnect;
-  needs the token handshake and `RemoteTransport` reconnect logic.
-- [x] **Synced countdown UI** — expose remaining call-window ms in `PlayerView` so the
-  client can render a depleting ring/bar on the Call button. Done: `GameClock`
-  tracks the call-window deadline (`callWindowRemainingMs()`), `GameSession`
-  forwards it, and `viewFor(state, seat, callWindowMs?)` threads it into
-  `PlayerView.callWindowMs`. Works in all three modes (clock runs in-browser for
-  single-player, on the server for LAN/internet).
+  needs the token handshake and `RemoteTransport` reconnect logic. The risky one —
+  internet play without it strands a seat on any blip, so pair it with tunnel support.
 
-### UX improvements (from UI/UX review — not yet implemented)
-- [x] **Call window countdown timer** — depleting gold bar under the Call button,
-  driven by `view.callWindowMs` (CSS depletion animation keyed per discard, so a
-  new discard restarts it). Respects `prefers-reduced-motion`.
-- [x] **Joker swap discoverability** — exposed jokers the player can swap (they
-  hold the matching natural and it's their discard turn) now get a gold glow +
-  ⇄ badge, computed independent of selection across all four seats' exposures.
-  The Swap button still completes the move once the natural is selected.
-- **Lobby quality-of-life:**
-  - [x] Copy-to-clipboard button on the join code chip (`.lobby-code-display`)
-    — `navigator.clipboard` with a "✓ Copied" confirmation; soft-fails on
-    insecure origins (code stays visible).
-  - [x] Leave room / back button for the host — replaces the RemoteConnection
-    (disconnecting frees the seat server-side via the existing disconnect
-    handler) and returns to the Home screen.
-  - [x] Per-seat connection indicator (connected dot for human seats) — a live
-    pulsing green dot on seats whose occupant is `human` (a connected socket
-    holds the seat), in the waiting-room seat list.
-
-### Mobile / responsive layout
+### Mobile / responsive layout (deferred)
 - Tile sizes are fixed px; opponent hands use `transform: rotate()`.
 - Need `clamp()`-based tile dimensions and a portrait-safe layout for rotated hands.
 - Explicitly deferred — tackle when the game reaches mobile users.
@@ -65,6 +26,32 @@ These were scoped in `multiplayer_plan.md` but not yet started.
 ---
 
 ## Completed (for reference)
+
+### Phase 3 — Polish track ✅ (2026-06-20)
+- **Synced countdown UI / `callWindowMs` plumbing** — `GameClock` tracks the
+  call-window deadline (`callWindowRemainingMs()`), `GameSession` forwards it, and
+  `viewFor(state, seat, callWindowMs?)` threads it into `PlayerView.callWindowMs`.
+  Works in all three modes (clock in-browser for single-player, on the server for
+  LAN/internet).
+- **Call-window countdown timer** — depleting gold bar under the Call button, driven
+  by `view.callWindowMs` (CSS depletion animation keyed per discard, so a new discard
+  restarts it). Respects `prefers-reduced-motion`.
+- **Joker-swap discoverability** — exposed jokers the player can swap (they hold the
+  matching natural and it's their discard turn) get a gold glow + ⇄ badge, computed
+  independent of selection across all four seats' exposures. The Swap button still
+  completes the move once the natural is selected.
+- **Lobby quality-of-life** — copy-to-clipboard on the join-code chip
+  (`.lobby-code-display`, soft-fails on insecure origins); leave-room/back button for
+  the host (disconnect frees the seat via the existing server handler); per-seat
+  connection dot for human seats in the waiting room.
+- **Bugfix — dev-mode single-player freeze on StrictMode remount.** Under `npm run dev`,
+  single-player froze after the first Charleston pass: `LocalTransport` wired its
+  session→UI link once in the constructor, and React StrictMode's dev double-mount ran
+  `GameBoard`'s cleanup → `dispose()`, severing it permanently (and stopping the clock)
+  with no re-arm on remount. Fixed by re-arming in `subscribe()` via an idempotent
+  `connect()` + `GameSession.resume()`; `dispose()` nulls the link so `connect()`
+  rebuilds it. Idempotent — production was never affected. Regression test in
+  `localTransport.test.ts`. `RemoteTransport` checked and unaffected.
 
 ### Phase 0 — Decouple UI from engine ✅
 `GameTransport` seam, `GameSession`, `LocalTransport`, `gameClock.ts` extraction,

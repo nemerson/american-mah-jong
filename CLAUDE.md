@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Guidance for Claude Code when working in this repository.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project
 
@@ -10,7 +10,9 @@ plays against three bots using a custom card ("International Mahjong Card 2026 �
 of the Horse", 51 hands in 9 sections) modeled on NMJL rules.
 
 **Status:** Phases 0–2 complete (decouple, LAN server, lobby + multi-human). Phase 3
-(internet play, reconnection) not started. See `BACKLOG.md` for next steps.
+**polish track** done (call-window countdown, joker-swap discoverability, lobby QoL).
+Remaining Phase 3 work is internet play — tunnel support + reconnection — not started.
+See `BACKLOG.md` for next steps.
 
 ## Commands
 
@@ -27,8 +29,9 @@ npm run dev:server   # tsx watch server/index.ts (hot-reload server only)
 npm run build:server # esbuild → dist-server/index.mjs
 
 # Quality
-npm test             # vitest run — 250 tests across 12 files
-npm run lint         # eslint — keep it at zero errors
+npm test                  # vitest run — 255 tests across 13 files
+npm run lint              # eslint — keep it at zero errors
+npm run typecheck:server  # tsc type-check server/ only (does not emit)
 ```
 
 **Multiplayer workflow:** `start-server.bat` (double-click) runs `npm run build` then
@@ -67,7 +70,11 @@ the authority validates through the engine before applying. The UI never holds t
 Two concrete transports:
 
 - **`LocalTransport`** (`src/net/localTransport.ts`) — wraps a `GameSession` in-process.
-  Used by the Electron app (single-player). No network involved.
+  Used by the Electron app (single-player). No network involved. `subscribe()` re-arms
+  the session→UI link (and restarts the clock via `GameSession.resume()`) so the same
+  instance survives a `dispose()`-then-resubscribe — e.g. React StrictMode's dev
+  double-mount. Don't move that link back into the constructor only: that reintroduces
+  the dev-mode freeze where intents mutate state but no view is ever emitted.
 - **`RemoteTransport`** (`src/net/remoteTransport.ts`) — talks to the authoritative
   server over Socket.IO. Selected at runtime when `window.__MAHJONG_REMOTE__ === true`
   (the server injects that flag into `index.html` when serving the web client).
@@ -95,7 +102,7 @@ pending timers.
 - `deck.ts` — 152-tile deck; flowers tagged value 1–8 (Flowers 1–4, Seasons 5–8)
 - `game.ts` — init/deal, draw, discard, advanceTurn, reorder
 - `charleston.ts` — the six passes + courtesy pass
-- `calls.ts` — claiming discards into exposures, joker exchange, `resolveClaims`
+- `calls.ts` — claiming discards into exposures, joker exchange, `resolveClaims` (note: test file is `claims.test.ts`)
 - `gameClock.ts` — timed authority-side progression
 - `handMatcher.ts` — card-hand spec schema + matching/scoring algorithms (card-agnostic)
 - `cardData.ts` — the 51 hands: display segments AND validation specs side by side
@@ -182,6 +189,23 @@ parity; `soap` is the white dragon used as zero; dragons map to suits
   can use the tile, otherwise a quick 4s window with bots acting at 1.5s.
 - Mahjong on a discard beats exposure calls; you can't claim your own discard.
 - All flowers are interchangeable; wall exhaustion = wall game (no winner).
+
+## Backlog management
+
+`BACKLOG.md` is the source of truth for the Notion project tracker, which syncs nightly —
+keep it accurate so the sync reflects reality.
+
+- **Mark tasks done as work completes.** Don't wait until the end of a session; update
+  `BACKLOG.md` as soon as a task is finished.
+- **Add new tasks as they surface.** If development uncovers a bug, a follow-up, or a
+  dependency that wasn't tracked, add it immediately with a `[ ]` status.
+- **Use a consistent format:**
+  - `[ ] Title` — pending
+  - `[x] Title` — done
+  - Optionally add a note on the same line or indented below for blockers or dependencies,
+    e.g. `[ ] Reconnection logic — blocked on Phase 3 socket auth`
+- **End-of-session pass.** Before wrapping up, do a quick review of `BACKLOG.md`: mark
+  anything completed during the session as `[x]`, and add any new items that surfaced.
 
 ## Testing
 
