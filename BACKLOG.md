@@ -13,9 +13,13 @@ done — see Completed below. What remains is actual internet play. Scoped in
   ngrok. Server already reads `HOST`/`PORT`/`CORS_ORIGIN` env vars; no code changes
   needed beyond documenting the tunnel setup. Cheapest win — gets remote players
   connecting.
-  - [ ] Validate a tunnel end-to-end (two remote clients through ngrok/Tailscale),
-    confirming `CORS_ORIGIN` is set correctly and Socket.IO upgrades over the tunnel —
-    "no code changes needed" is unproven until a real remote session works.
+  - [x] Validate a tunnel end-to-end — Cloudflare quick tunnel (`cloudflared tunnel
+    --url http://localhost:5174`) verified 2026-06-26: HTTP 200 with the
+    `__MAHJONG_REMOTE__` flag injected, a Socket.IO WebSocket round-trip (create room →
+    lobby snapshot) succeeds through the tunnel, and a real remote client reached the
+    game room via the public URL. No server code changes were needed — the existing
+    `HOST`/`PORT`/`CORS_ORIGIN` env config is sufficient. (Still worth a full live
+    two-human hand for latency/feel, but the connectivity path is proven.)
 - [ ] **Reconnection** — session tokens so a disconnected player can rejoin their seat
   mid-game. `server/room.ts` already holds the seat without bot takeover on disconnect;
   needs the token handshake and `RemoteTransport` reconnect logic. The risky one —
