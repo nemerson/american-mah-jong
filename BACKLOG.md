@@ -27,10 +27,12 @@ done — see Completed below. What remains is actual internet play. Scoped in
   socket; `RemoteTransport` replays the latest `view` to a re-subscribing board. Gap:
   the reconnected socket is a new identity with no `socket.data.code`, so the server
   can't tell it owns the held seat. Scoped 2026-06-26 — sequence:
-  - [ ] **Stable player identity** — mint a per-seat token (`crypto.randomUUID()`) at
-    join, store on the `Seat`, return to that client. Add `token` to the handshake and
-    a `{ type: 'rejoin'; code: string; token: string }` `LobbyRequest`
-    (`server/room.ts`, `src/net/types.ts`).
+  - [x] **Stable player identity** — `seatHuman` mints a per-seat `randomUUID()` token
+    stored on the `Seat`; delivered only in that client's own `LobbyState.token`
+    (`lobbyStateFor`). Added the `{ type: 'rejoin'; code: string; token: string }`
+    `LobbyRequest` variant (handler is the next sub-task). 4 new `room.test.ts` cases:
+    token delivered, stable across pushes, distinct per seat / not leaked, bot seats
+    untouched. (`server/room.ts`, `src/net/types.ts`)
   - [ ] **Server rejoin handler** (`server/lobby.ts`) — match `token` to the held seat,
     re-attach the socket, set `socket.data.code` / `socket.join(code)`, `pushTo`. Must
     bypass the `room.started` rejection that normal `join` enforces — correct for

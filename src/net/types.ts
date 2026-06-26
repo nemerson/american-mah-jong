@@ -76,17 +76,26 @@ export interface LobbyState {
     mySeat: number;
     seats: LobbySeat[];
     started: boolean;
+    /**
+     * A secret token identifying the recipient's own seat, minted by the server
+     * when they were seated and present only in their own snapshots. The client
+     * persists it so a disconnected player can `rejoin` their held seat
+     * mid-game — the socket id changes on reconnect, but this does not.
+     */
+    token?: string;
 }
 
 /**
  * Requests a client sends while in the lobby. `create` mints a room; `join`
- * enters one by code; `addBot`/`removeSeat` shape the table; `setEast` picks
- * the dealer; `start` begins the game. The server validates each (room exists,
- * seat free, table full enough) and ignores anything illegal.
+ * enters one by code; `rejoin` reclaims a held seat mid-game by its secret
+ * token; `addBot`/`removeSeat` shape the table; `setEast` picks the dealer;
+ * `start` begins the game. The server validates each (room exists, seat free,
+ * token matches, table full enough) and ignores anything illegal.
  */
 export type LobbyRequest =
     | { type: 'create'; name?: string }
     | { type: 'join'; code: string; name?: string }
+    | { type: 'rejoin'; code: string; token: string }
     | { type: 'addBot'; seat: number }
     | { type: 'removeSeat'; seat: number }
     | { type: 'setEast'; seat: number }

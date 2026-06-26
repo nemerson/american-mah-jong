@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import type { Socket } from 'socket.io';
 import type { Intent, LobbySeat, LobbyState, StartResult } from '../src/net/types';
 import { GameSession } from '../src/net/gameSession';
@@ -15,6 +16,7 @@ interface Seat {
     socket?: Socket;   // a connected human controls this seat
     bot: boolean;      // filled by a bot
     name: string;
+    token?: string;    // secret reconnection token for a human seat
 }
 
 export class GameRoom {
@@ -37,12 +39,16 @@ export class GameRoom {
         return this.seats.every(s => s.socket === undefined);
     }
 
-    /** Seat a newly connected human in the first free seat. Returns it, or -1. */
+    /**
+     * Seat a newly connected human in the first free seat. Returns it, or -1.
+     * Mints a secret reconnection token, delivered to that client in their own
+     * lobby snapshot so they can later `rejoin` the seat if their socket drops.
+     */
     seatHuman(socket: Socket, name?: string): number {
         if (this.started) return -1;
         const seat = this.seats.findIndex(s => !s.socket && !s.bot);
         if (seat === -1) return -1;
-        this.seats[seat] = { socket, bot: false, name: name?.trim() || `Player ${seat + 1}` };
+        this.seats[seat] = { socket, bot: false, name: name?.trim() || `Player ${seat + 1}`, token: randomUUID() };
         return seat;
     }
 
@@ -186,7 +192,9 @@ export class GameRoom {
             isYou: index === mySeat,
             isEast: index === this.eastIndex,
         }));
-        return { code: this.code, mySeat, seats, started: this.started };
+        // The token is the recipient's own secret — only ever in their snapshot.
+        const token = mySeat >= 0 ? this.seats[mySeat].token : undefined;
+        return { code: this.code, mySeat, seats, started: this.started, token };
     }
 
     private seatOf(socket: Socket): number {

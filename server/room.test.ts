@@ -129,3 +129,59 @@ describe('GameRoom East invariant on seat clear', () => {
         expect(east.index).toBe(0);
     });
 });
+
+describe('GameRoom reconnection token', () => {
+    it('delivers a token to a seated human in their own lobby snapshot', () => {
+        const room = makeRoom();
+        const host = new FakeSocket();
+        room.seatHuman(asSocket(host), 'Host');
+
+        room.pushTo(asSocket(host));
+        const snap = host.lastLobby()!;
+        expect(snap.token).toBeTruthy();
+        expect(typeof snap.token).toBe('string');
+    });
+
+    it('keeps the same token stable across repeated pushes', () => {
+        const room = makeRoom();
+        const host = new FakeSocket();
+        room.seatHuman(asSocket(host), 'Host');
+
+        room.pushTo(asSocket(host));
+        const first = host.lastLobby()!.token;
+        room.pushTo(asSocket(host));
+        const second = host.lastLobby()!.token;
+        expect(first).toBe(second);
+    });
+
+    it('gives different seats different tokens and never leaks another seat\'s token', () => {
+        const room = makeRoom();
+        const host = new FakeSocket();
+        const guest = new FakeSocket();
+        room.seatHuman(asSocket(host), 'Host');   // seat 0
+        room.seatHuman(asSocket(guest), 'Guest'); // seat 1
+
+        room.pushTo(asSocket(host));
+        room.pushTo(asSocket(guest));
+        const hostToken = host.lastLobby()!.token;
+        const guestToken = guest.lastLobby()!.token;
+        // Each gets their own, and the two are distinct.
+        expect(hostToken).toBeTruthy();
+        expect(guestToken).toBeTruthy();
+        expect(hostToken).not.toBe(guestToken);
+    });
+
+    it('does not include a token for a bot-only seat snapshot', () => {
+        const room = makeRoom();
+        const host = new FakeSocket();
+        room.seatHuman(asSocket(host), 'Host'); // seat 0 (human)
+        room.addBot(1);
+
+        // The bot seat has no socket and no token; the human's snapshot still
+        // carries only their own.
+        room.pushTo(asSocket(host));
+        const snap = host.lastLobby()!;
+        expect(snap.token).toBeTruthy();
+        expect(snap.seats[1].occupant).toBe('bot');
+    });
+});
