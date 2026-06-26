@@ -9,19 +9,26 @@ done — see Completed below. What remains is actual internet play. Scoped in
 `multiplayer_plan.md`.
 
 ### Internet connectivity (next up)
-- **Tunnel support** — expose the local server over the internet via Tailscale or
+- [ ] **Tunnel support** — expose the local server over the internet via Tailscale or
   ngrok. Server already reads `HOST`/`PORT`/`CORS_ORIGIN` env vars; no code changes
   needed beyond documenting the tunnel setup. Cheapest win — gets remote players
   connecting.
-- **Reconnection** — session tokens so a disconnected player can rejoin their seat
+  - [ ] Validate a tunnel end-to-end (two remote clients through ngrok/Tailscale),
+    confirming `CORS_ORIGIN` is set correctly and Socket.IO upgrades over the tunnel —
+    "no code changes needed" is unproven until a real remote session works.
+- [ ] **Reconnection** — session tokens so a disconnected player can rejoin their seat
   mid-game. `server/room.ts` already holds the seat without bot takeover on disconnect;
   needs the token handshake and `RemoteTransport` reconnect logic. The risky one —
   internet play without it strands a seat on any blip, so pair it with tunnel support.
+  - [ ] Decide and implement a seat-hold timeout — an indefinitely held empty seat
+    blocks the table. Need either a reclaim window after which the seat frees (or bot
+    takes over) or an explicit host "drop seat" control.
 
 ### Mobile / responsive layout (deferred)
-- Tile sizes are fixed px; opponent hands use `transform: rotate()`.
-- Need `clamp()`-based tile dimensions and a portrait-safe layout for rotated hands.
-- Explicitly deferred — tackle when the game reaches mobile users.
+- [ ] **Responsive tile + board layout** — tile sizes are fixed px and opponent hands
+  use `transform: rotate()`. Need `clamp()`-based tile dimensions and a portrait-safe
+  layout for rotated hands. Explicitly deferred — tackle when the game reaches mobile
+  users.
 
 ---
 
