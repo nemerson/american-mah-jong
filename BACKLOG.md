@@ -5,7 +5,8 @@ Pending work ordered roughly by priority. See `CLAUDE.md` for architecture conte
 ## Phase 3 — Internet play
 
 The Phase 3 **polish track** (countdown UI, joker discoverability, lobby QoL) is
-done — see Completed below. What remains is actual internet play. Scoped in
+done — see Completed below. Internet play is now underway: tunnel support is
+validated (done), and reconnection is mid-build (session tokens landed). Scoped in
 `multiplayer_plan.md`.
 
 ### Internet connectivity (next up)

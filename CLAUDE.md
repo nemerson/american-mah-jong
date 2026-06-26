@@ -11,8 +11,11 @@ of the Horse", 51 hands in 9 sections) modeled on NMJL rules.
 
 **Status:** Phases 0–2 complete (decouple, LAN server, lobby + multi-human). Phase 3
 **polish track** done (call-window countdown, joker-swap discoverability, lobby QoL).
-Remaining Phase 3 work is internet play — tunnel support + reconnection — not started.
-See `BACKLOG.md` for next steps.
+Phase 3 **internet play** in progress: tunnel support validated end-to-end (Cloudflare
+quick tunnel, no server code changes — see "Exposing over the internet" below);
+**reconnection** is mid-build (per-seat session tokens landed; rejoin handler, seat-hold
+timeout w/ bot takeover, and client auto-rejoin still to do). See `BACKLOG.md` for the
+sequenced sub-tasks.
 
 ## Commands
 
@@ -29,7 +32,7 @@ npm run dev:server   # tsx watch server/index.ts (hot-reload server only)
 npm run build:server # esbuild → dist-server/index.mjs
 
 # Quality
-npm test                  # vitest run — 255 tests across 13 files
+npm test                  # vitest run — 259 tests across 13 files
 npm run lint              # eslint — keep it at zero errors
 npm run typecheck:server  # tsc type-check server/ only (does not emit)
 ```
@@ -48,6 +51,21 @@ one silently move to 5174 while `electron/main.cts` hardcodes 5173.
 ```powershell
 Get-NetTCPConnection -LocalPort 5174 | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }
 ```
+
+**Exposing over the internet (tunnel):** the server takes no code changes to go public —
+its `HOST`/`PORT`/`CORS_ORIGIN` env vars are enough. Validated path is a Cloudflare quick
+tunnel (`cloudflared`, installed via `winget install Cloudflare.cloudflared`):
+```powershell
+# 1. build + serve locally first (server must be up on 5174)
+npm run build; npm run server
+# 2. in another shell, expose it — prints a public https://<random>.trycloudflare.com URL
+cloudflared tunnel --url http://localhost:5174
+```
+The quick-tunnel URL is ephemeral (new one each run) and the lobby has no auth yet
+(`CORS_ORIGIN` defaults to `*`) — fine for a controlled test, tighten before leaving a
+tunnel up. A WebSocket round-trip (Socket.IO) is confirmed working through the tunnel.
+For a stable URL later, switch to a named Cloudflare tunnel / ngrok reserved domain /
+Tailscale Funnel — no app changes, just a different tunnel command.
 
 ## Workflow
 
@@ -143,7 +161,10 @@ loads the same build without the flag, staying single-player.
 - `server/index.ts` — HTTP + Socket.IO setup, LAN URL logging
 - `server/lobby.ts` — connection handler; routes socket events to rooms
 - `server/room.ts` — one room per game: wraps `GameSession`, handles seat assignment,
-  per-player view filtering, claim collection, Charleston sync
+  per-player view filtering, claim collection, Charleston sync. Mid-game disconnect
+  holds the seat (drops the socket, no bot takeover) for reconnection. Each human seat
+  is minted a secret `randomUUID` token at `seatHuman`, delivered only in that client's
+  own `LobbyState.token` — the basis for the in-progress `rejoin` flow (see `BACKLOG.md`).
 
 ### Net layer (`src/net/`)
 
@@ -160,7 +181,8 @@ loads the same build without the flag, staying single-player.
 - **Phase 0 (decouple UI from engine)** — ✅ done.
 - **Phase 1 (server + LAN, 1 human + bots)** — ✅ done.
 - **Phase 2 (multiple humans, room codes, view filtering)** — ✅ done.
-- **Phase 3+ (internet play, reconnection, mobile layout)** — not started. See `BACKLOG.md`.
+- **Phase 3 (internet play)** — in progress: tunnel support validated; reconnection
+  mid-build (session tokens done). Mobile/responsive layout deferred. See `BACKLOG.md`.
 
 ## Card data invariants (cardData.ts)
 
