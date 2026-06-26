@@ -21,12 +21,36 @@ done — see Completed below. What remains is actual internet play. Scoped in
     `HOST`/`PORT`/`CORS_ORIGIN` env config is sufficient. (Still worth a full live
     two-human hand for latency/feel, but the connectivity path is proven.)
 - [ ] **Reconnection** — session tokens so a disconnected player can rejoin their seat
-  mid-game. `server/room.ts` already holds the seat without bot takeover on disconnect;
-  needs the token handshake and `RemoteTransport` reconnect logic. The risky one —
-  internet play without it strands a seat on any blip, so pair it with tunnel support.
-  - [ ] Decide and implement a seat-hold timeout — an indefinitely held empty seat
-    blocks the table. Need either a reclaim window after which the seat frees (or bot
-    takes over) or an explicit host "drop seat" control.
+  mid-game. The risky one — internet play without it strands a seat on any blip, so
+  pair it with tunnel support. Already in place: `room.ts` `leave()` holds the seat
+  mid-game (drops only the socket, no bot takeover); Socket.IO auto-reconnects the
+  socket; `RemoteTransport` replays the latest `view` to a re-subscribing board. Gap:
+  the reconnected socket is a new identity with no `socket.data.code`, so the server
+  can't tell it owns the held seat. Scoped 2026-06-26 — sequence:
+  - [ ] **Stable player identity** — mint a per-seat token (`crypto.randomUUID()`) at
+    join, store on the `Seat`, return to that client. Add `token` to the handshake and
+    a `{ type: 'rejoin'; code: string; token: string }` `LobbyRequest`
+    (`server/room.ts`, `src/net/types.ts`).
+  - [ ] **Server rejoin handler** (`server/lobby.ts`) — match `token` to the held seat,
+    re-attach the socket, set `socket.data.code` / `socket.join(code)`, `pushTo`. Must
+    bypass the `room.started` rejection that normal `join` enforces — correct for
+    newcomers, exactly what we skip for the seat owner.
+  - [ ] **Seat-hold timeout → bot takeover** (`server/room.ts`, `src/net/gameSession.ts`)
+    — on mid-game disconnect start a ~90s reclaim timer; on expiry a bot plays the seat
+    to end of game (chosen over freeing the seat, which would kill everyone's game).
+    Needs a new `GameSession` method to promote a seat to bot-controlled at runtime
+    (`isBot` is currently `readonly`, derived once at init): flip
+    `state.players[seat].isBot` + the cached array, then nudge the clock if it's that
+    seat's turn. Clear the timer on successful rejoin; reject rejoin after takeover.
+  - [ ] **Client persistence + auto-rejoin** (`src/components/Lobby.tsx`,
+    `src/net/remoteTransport.ts`) — persist `{ code, token }` to `sessionStorage`;
+    auto-send `rejoin` on the socket's `reconnect` event / on mount with a stored token;
+    the existing `lobby.started` branch hands back to `GameBoard`. Clear the token on
+    intentional leave and game end.
+  - [ ] **Edge cases + tests** — double rejoin / two tabs (replace socket, don't
+    duplicate seat); rejoin to a disposed room (clear token, "game has ended"); rejoin
+    after bot takeover (rejected); pre-start disconnect keeps the current free-the-seat
+    behavior. Extend `server/room.test.ts`'s `FakeSocket` harness.
 
 ### Mobile / responsive layout (deferred)
 - [ ] **Responsive tile + board layout** — tile sizes are fixed px and opponent hands
