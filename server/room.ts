@@ -127,23 +127,46 @@ export class GameRoom {
         }
     }
 
-    /** Free a leaving human's seat (pre-game) and report whether anyone remains. */
+    /** Free a leaving human's seat (pre-game) or hold it for reconnection (mid-game). */
     leave(socket: Socket): void {
         const seat = this.seatOf(socket);
         if (seat === -1) return;
         if (!this.started) {
+            // Pre-game: free the seat outright, and reap the room if it empties —
+            // there's no game state worth preserving.
             this.seats[seat] = { bot: false, name: `Seat ${seat + 1}` };
             this.ensureEastOccupied();
+            if (this.isEmpty) {
+                this.dispose();
+                this.onEmpty(this.code);
+            }
         } else {
-            // Mid-game: hold the seat but drop the socket. A bot does not take
-            // over (kept simple for Phase 2); the player may reconnect to a new
-            // seat. Reconnection with session tokens is Phase 3.
+            // Mid-game: hold the seat but drop the socket, keeping the seat's
+            // token so the player can `rejoin`. The room is deliberately NOT
+            // reaped when the last human drops — a solo human (1 human + 3 bots)
+            // must be able to reconnect to a game that's still here. A seat-hold
+            // timeout that bots an unreclaimed seat and eventually reaps a truly
+            // abandoned room is the next sub-task.
             this.seats[seat] = { ...this.seats[seat], socket: undefined };
         }
-        if (this.isEmpty) {
-            this.dispose();
-            this.onEmpty(this.code);
-        }
+    }
+
+    /**
+     * Re-attach a reconnecting human to the seat they still hold, identified by
+     * the secret token minted at `seatHuman` — the socket id changes across a
+     * reconnect, so identity can't be by socket. Returns the seat index, or -1
+     * if no seat matches the token. This is the one path allowed to seat a human
+     * into an already-started room (normal `join` is rejected once `started`).
+     */
+    rejoin(socket: Socket, token: string): number {
+        if (!token) return -1;
+        const seat = this.seats.findIndex(s => s.token === token);
+        if (seat === -1) return -1;
+        // Replace whatever socket the seat had — none if disconnected, or a
+        // stale one on a double rejoin (two tabs). Seat membership is by socket
+        // identity, so swapping the reference never duplicates the seat.
+        this.seats[seat] = { ...this.seats[seat], socket };
+        return seat;
     }
 
     dispose(): void {

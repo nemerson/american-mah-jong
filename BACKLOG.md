@@ -34,10 +34,15 @@ validated (done), and reconnection is mid-build (session tokens landed). Scoped 
     `LobbyRequest` variant (handler is the next sub-task). 4 new `room.test.ts` cases:
     token delivered, stable across pushes, distinct per seat / not leaked, bot seats
     untouched. (`server/room.ts`, `src/net/types.ts`)
-  - [ ] **Server rejoin handler** (`server/lobby.ts`) — match `token` to the held seat,
-    re-attach the socket, set `socket.data.code` / `socket.join(code)`, `pushTo`. Must
-    bypass the `room.started` rejection that normal `join` enforces — correct for
-    newcomers, exactly what we skip for the seat owner.
+  - [x] **Server rejoin handler** — `lobby.ts` `rejoin` case matches `token` to the held
+    seat via `GameRoom.rejoin`, re-attaches the socket, sets `socket.data.code` /
+    `socket.join(code)`, and `pushTo`s the current view; it bypasses the `room.started`
+    guard that normal `join` enforces. `rejoin()` swaps the seat's socket by identity so
+    a double rejoin (two tabs) never duplicates the seat. **Behavior change:** `leave()`
+    no longer reaps a *mid-game* room when the last human drops — otherwise a solo human
+    (1 human + 3 bots) could never reconnect. This leaves an abandoned mid-game room
+    lingering (clock still running) until the timeout below reaps it. 3 new
+    `room.test.ts` cases. (`server/room.ts`, `server/lobby.ts`)
   - [ ] **Seat-hold timeout → bot takeover** (`server/room.ts`, `src/net/gameSession.ts`)
     — on mid-game disconnect start a ~90s reclaim timer; on expiry a bot plays the seat
     to end of game (chosen over freeing the seat, which would kill everyone's game).
@@ -45,6 +50,9 @@ validated (done), and reconnection is mid-build (session tokens landed). Scoped 
     (`isBot` is currently `readonly`, derived once at init): flip
     `state.players[seat].isBot` + the cached array, then nudge the clock if it's that
     seat's turn. Clear the timer on successful rejoin; reject rejoin after takeover.
+    **Must also reap a fully-abandoned mid-game room** — the prior sub-task stopped
+    `leave()` from disposing on the last human's exit, so this timeout is now the only
+    thing that frees an abandoned room's `GameSession`/clock. Close that leak here.
   - [ ] **Client persistence + auto-rejoin** (`src/components/Lobby.tsx`,
     `src/net/remoteTransport.ts`) — persist `{ code, token }` to `sessionStorage`;
     auto-send `rejoin` on the socket's `reconnect` event / on mount with a stored token;

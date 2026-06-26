@@ -43,6 +43,21 @@ export class Lobby {
                 }
                 return;
             }
+            case 'rejoin': {
+                if (this.roomOf(socket)) return; // already attached to a room
+                // Unlike `join`, this is allowed into a started room — it's how a
+                // dropped player reclaims their held seat by its secret token.
+                const room = this.rooms.get(normalizeCode(req.code));
+                const seat = room?.rejoin(socket, req.token) ?? -1;
+                if (!room || seat === -1) {
+                    socket.emit('lobbyError', 'Could not rejoin that game.');
+                    return;
+                }
+                socket.data.code = room.code;
+                socket.join(room.code);
+                room.pushTo(socket); // hand back their current view (game or lobby)
+                return;
+            }
             case 'addBot': {
                 const room = this.roomOf(socket);
                 room?.addBot(req.seat);

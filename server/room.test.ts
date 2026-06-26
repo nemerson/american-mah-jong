@@ -184,4 +184,55 @@ describe('GameRoom reconnection token', () => {
         expect(snap.token).toBeTruthy();
         expect(snap.seats[1].occupant).toBe('bot');
     });
+
+    /** Seat one human + three bots and start the game; returns the seat token. */
+    function startSoloGame(room: GameRoom, host: FakeSocket): string {
+        room.seatHuman(asSocket(host), 'Host');
+        room.addBot(1);
+        room.addBot(2);
+        room.addBot(3);
+        room.pushTo(asSocket(host));
+        const token = host.lastLobby()!.token!;
+        expect(room.start()).toEqual({ ok: true });
+        return token;
+    }
+
+    it('rejoins a held seat mid-game with the right token and delivers a view', () => {
+        const room = makeRoom();
+        const host = new FakeSocket();
+        const token = startSoloGame(room, host);
+
+        room.leave(asSocket(host)); // disconnect mid-game: seat 0 is held
+        const reconnect = new FakeSocket();
+        const seat = room.rejoin(asSocket(reconnect), token);
+
+        expect(seat).toBe(0);
+        room.pushTo(asSocket(reconnect));
+        expect((reconnect.events('view') as PlayerView[]).length).toBeGreaterThan(0);
+    });
+
+    it('rejects a rejoin with an unknown token', () => {
+        const room = makeRoom();
+        const host = new FakeSocket();
+        startSoloGame(room, host);
+        room.leave(asSocket(host));
+
+        const reconnect = new FakeSocket();
+        expect(room.rejoin(asSocket(reconnect), 'not-a-real-token')).toBe(-1);
+    });
+
+    it('swaps the socket on a double rejoin without duplicating the seat', () => {
+        const room = makeRoom();
+        const host = new FakeSocket();
+        const token = startSoloGame(room, host);
+
+        // Rejoin while the original socket is still attached (e.g. a second tab).
+        const second = new FakeSocket();
+        expect(room.rejoin(asSocket(second), token)).toBe(0);
+
+        // The new socket now owns the seat; a broadcast reaches it, not a phantom.
+        second.emitted.length = 0;
+        room.pushAll();
+        expect((second.events('view') as PlayerView[]).length).toBeGreaterThan(0);
+    });
 });
